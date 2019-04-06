@@ -128,13 +128,13 @@ res = res.detach().numpy()
 # img = to_pil(img)
 # img.show()
 #=========
-for i in range(1):
-    img = res[i].transpose((1, 2, 0))
-    cv2.imshow('aa {}.jpg'.format(i), img)
+# for i in range(1):
+#     img = res[i].transpose((1, 2, 0))
+#     cv2.imshow('aa {}.jpg'.format(i), img)
 # #
 # # plt.plot(img)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
 
 # paras = list(net.parameters())
 # print(paras[0])
