@@ -11,6 +11,7 @@ from model.roi_layers import ROIPool
 
 import vgg, cv2
 from mydataset import MyDataset, ToTensor
+from image_processing import showTensor
 
 
 # sys.path.append('/mnt/01D3F51B1A6C3EA0/UIT/Duyld/paper/DACN/home/dungnm/pytorch/faster-rcnn.pytorch/lib')
@@ -23,16 +24,18 @@ class MyRRN(nn.Module):
         super(MyRRN, self).__init__()
         self.features = raw_vgg13.features
         self.roi_pool = ROIPool((7, 7), 1/16)
-        # self.fc1 = nn.Linear( 512* 7 * 7, 4096)
         self.deconv1 = nn.ConvTranspose2d(in_channels=512,out_channels=64,kernel_size=4,stride=8, padding=1)
         self.conv1 = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=3, padding=1)
+        # self.fc1 = nn.Linear( 512* 7 * 7, 4096)
+        # self.deconv2 = nn.ConvTranspose2d(in_channels=3,out_channels=64,kernel_size=4,stride=8, padding=1)
+
         # self.maxunpool1=nn.MaxUnpool2d(kernel_size=2)
 
 
     def forward(self, x, rois):
         x = self.features(x)
         # x = self.maxunpool1(x)
-        print(rois.size())
+        # print(rois.size())
         x = self.roi_pool(x, rois)
         x = F.relu(self.deconv1(x))
         x = self.conv1(x)
@@ -58,24 +61,27 @@ class MyRRN(nn.Module):
 
 if __name__ == '__main__':
     transform = ToTensor()
+    THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
+
     device = torch.device("cuda:0")
     my_dataset = MyDataset(imgs_csv='mydata/imgs.csv',rois_csv='mydata/rois.csv',
-    root_dir='mydata/imgs', transform = transform)
+    root_dir='mydata/imgs', ther_path=THERMAL_PATH,transform = transform)
 
     dataloader = DataLoader(my_dataset, batch_size=1,
     shuffle=True, num_workers=1)
 
-    # dataiter = iter(dataloader)
-    # sample = dataiter.next()
-    # print(sample['bb'])
+    dataiter = iter(dataloader)
+    sample = dataiter.next()
+    sam = sample['image']
+    print(sam.shape)
+    bbb = sample['bb']
 
-    # roi_pool = ROIPool((7, 7), 1/16)
-    # # roi_pool = RoIPooling2D((7,7),1/16)
-    # sam = sample['image'].type('torch.DoubleTensor')
-    # bbb = sample['bb'].type('torch.DoubleTensor')
+    # roi_pool = ROIPool((50, 50), 1/1)
     # sam, bbb = sam.to(device),bbb.to(device)
     #
     # pooled_output = roi_pool(sam,bbb)
+    # pooled_output = pooled_output.cpu()
+
     # print(raw_vgg13)
 
 
@@ -100,6 +106,7 @@ dataiter = iter(dataloader)
 sample = dataiter.next()
 sam = sample['image']
 bbb = sample['bb']
+# print(sam)
 print(bbb)
 bbb=bbb.view(-1, 5)
 sam, bbb = sam.to(device),bbb.to(device)
@@ -108,7 +115,7 @@ sam, bbb = sam.to(device),bbb.to(device)
 # print(type(inp))
 # # print(labels)
 net = MyRRN()
-print(net)
+# print(net)
 net.to(device)
 # #
 # #
@@ -118,9 +125,7 @@ print(out.shape)
 criterion = nn.MSELoss()
 optimizer = optim.SGD(net.parameters(), lr=0.000000001, momentum=0.9)
 
-res = out.cpu()
-res = res.detach().numpy()
-
+showTensor(out)
 # img = res[0]
 # img = img.transpose((1, 2, 0))
 # # print(img.shape)

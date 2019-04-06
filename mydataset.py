@@ -1,5 +1,5 @@
 from __future__ import print_function, division
-import os
+import os, sys, cv2
 import torch
 import pandas as pd
 from skimage import io, transform
@@ -9,16 +9,10 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 import matplotlib.patches as patches
 from PIL import Image
-import sys
 from model.roi_layers import ROIPool
+from image_processing import equalizeHist, showTensor
 # sys.path.append('~/pytorch/simple-faster-rcnn-pytorch/')
-# from model.roi_module import RoIPooling2D
-# sys.path.append('~/pytorch/faster-rcnn.pytorch/lib')
-# print(sys.path)
-
-
-
-
+#
 # Ignore warnings
 import warnings
 warnings.filterwarnings("ignore")
@@ -41,22 +35,24 @@ def show_img_bb(image, bb):
 # plt.waitforbuttonpress()
 class MyDataset(Dataset):
     """docstring for MyDataset."""
-    def __init__(self, imgs_csv,rois_csv, root_dir, transform=None):
+    def __init__(self, imgs_csv,rois_csv, ther_path,root_dir, transform=None):
         super(MyDataset, self).__init__()
         self.imgs = pd.read_csv(imgs_csv)
         self.bb = pd.read_csv(rois_csv)
         self.root_dir = root_dir
         self.transform = transform
+        self.ther_path = ther_path
     def __len__(self):
         return len(self.imgs)
 
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir,
                                 self.imgs.iloc[idx,0])
-        image = io.imread(img_name)
+        image = cv2.imread(img_name)
         bbs = self.bb.iloc[idx*4:4*(idx+1),:].as_matrix()
         bbs = bbs.astype('float')
-        sample = {'image': image, 'bb': bbs}
+        tm = cv2.imread(os.path.join(self.ther_path,'set05_V000_lwir_I02918.jpg'),0)
+        sample = {'image': image, 'bb': bbs, 'tm':tm}
 
         if self.transform:
             sample = self.transform(sample)
@@ -67,20 +63,23 @@ class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
     def __call__(self, sample):
-        image, landmarks = sample['image'], sample['bb']
+        image, bbs, tm = sample['image'], sample['bb'], sample['tm']
 
         # swap color axis because
         # numpy image: H x W x C
         # torch image: C X H X W
         image = image.transpose((2, 0, 1))
+        tm = equalizeHist(tm)
         return {'image': torch.from_numpy(image).type('torch.FloatTensor'),
-                'bb': torch.from_numpy(landmarks).type('torch.FloatTensor')}
+                'bb': torch.from_numpy(bbs).type('torch.FloatTensor'),
+                'tm': torch.from_numpy(tm).type('torch.FloatTensor')}
 
 if __name__ == '__main__':
+    THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
     transform = ToTensor()
     device = torch.device("cuda:0")
     my_dataset = MyDataset(imgs_csv='mydata/imgs.csv',rois_csv='mydata/rois.csv',
-    root_dir='mydata/imgs', transform = transform)
+    root_dir='mydata/imgs', ther_path=THERMAL_PATH,transform = transform)
 
     dataloader = DataLoader(my_dataset, batch_size=1,
     shuffle=True, num_workers=1)
@@ -90,16 +89,17 @@ if __name__ == '__main__':
 
     dataiter = iter(dataloader)
     sample = dataiter.next()
-    print(sample['bb'])
+    sam = sample['image']
+    bbb = sample['bb']
+    tm = sample['tm']
 
-    roi_pool = ROIPool((7, 7), 1/16)
-    # roi_pool = RoIPooling2D((7,7),1/16)
-    sam = sample['image'].type('torch.DoubleTensor')
-    bbb = sample['bb'].type('torch.DoubleTensor')
+    roi_pool = ROIPool((50, 50), 1)
     sam, bbb = sam.to(device),bbb.to(device)
+    # # #
+    out = roi_pool(sam,bbb)
+    showTensor(out)
 
-    pooled_output = roi_pool(sam,bbb)
-    print(pooled_output)
+
 
     # image = io.imread(img_id)
     # a = torch.from_numpy(image)
