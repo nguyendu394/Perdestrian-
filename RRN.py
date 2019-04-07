@@ -13,10 +13,6 @@ import vgg, cv2
 from mydataset import MyDataset, ToTensor
 from image_processing import showTensor
 
-
-# sys.path.append('/mnt/01D3F51B1A6C3EA0/UIT/Duyld/paper/DACN/home/dungnm/pytorch/faster-rcnn.pytorch/lib')
-# from utils.blob import im_list_to_blob
-
 raw_vgg13 = vgg.vgg16(pretrained=True)
 
 class MyRRN(nn.Module):
@@ -29,13 +25,9 @@ class MyRRN(nn.Module):
         # self.fc1 = nn.Linear( 512* 7 * 7, 4096)
         # self.deconv2 = nn.ConvTranspose2d(in_channels=3,out_channels=64,kernel_size=4,stride=8, padding=1)
 
-        # self.maxunpool1=nn.MaxUnpool2d(kernel_size=2)
-
 
     def forward(self, x, rois):
         x = self.features(x)
-        # x = self.maxunpool1(x)
-        # print(rois.size())
         x = self.roi_pool(x, rois)
         x = F.relu(self.deconv1(x))
         x = self.conv1(x)
@@ -57,89 +49,72 @@ class MyRRN(nn.Module):
 # testloader = torch.utils.data.DataLoader(testset, batch_size=1,
 #                                          shuffle=False, num_workers=2)
 
-
-
 if __name__ == '__main__':
-    transform = ToTensor()
     THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
+    ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/images/set00/V000/visible'
+    IMGS_CSV = 'mydata/imgs_name_set00_v000.csv'
+    ROIS_CSV = 'mydata/rois_set00_v000.csv'
+    BZ = 1 #batch size
+    EPOCH = 1
+    LR = 0.000000001 #learning rate
+    MT = 0.9 #momentum
 
     device = torch.device("cuda:0")
-    my_dataset = MyDataset(imgs_csv='mydata/imgs.csv',rois_csv='mydata/rois.csv',
-    root_dir='mydata/imgs', ther_path=THERMAL_PATH,transform = transform)
+    transform = ToTensor()
 
-    dataloader = DataLoader(my_dataset, batch_size=1,
+    my_dataset = MyDataset(imgs_csv=IMGS_CSV,rois_csv=ROIS_CSV,
+    root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = transform)
+
+    dataloader = DataLoader(my_dataset, batch_size=BZ,
     shuffle=True, num_workers=1)
 
-    dataiter = iter(dataloader)
-    sample = dataiter.next()
-    sam = sample['image']
-    print(sam.shape)
-    bbb = sample['bb']
+    RRN_net = MyRRN()
+    # print(net)
+    RRN_net.to(device)
 
-    # roi_pool = ROIPool((50, 50), 1/1)
-    # sam, bbb = sam.to(device),bbb.to(device)
-    #
-    # pooled_output = roi_pool(sam,bbb)
-    # pooled_output = pooled_output.cpu()
+    criterion = nn.MSELoss()
+    optimizer = optim.SGD(RRN_net.parameters(), lr=LR, momentum=MT)
 
-    # print(raw_vgg13)
+    for epoch in range(EPOCH):  # Lặp qua bộ dữ liệu huấn luyện nhiều lần
+        running_loss = 0.0
+        for i, data in enumerate(dataloader):
+            # Lấy dữ liệu
+            sample = data
+            sam = sample['image']
+            bbb = sample['bb']
+            bbb=bbb.view(-1, 5)
+            #reset id
+            bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
+            tm = sample['tm']
+            # print(sam.shape)
+            # print(bbb.shape)
+            # print(tm.shape)
+            sam,bbb,tm = sam.to(device), bbb.to(device), tm.to(device)
 
+            roi_pool = ROIPool((50, 50), 1/1)
 
-    # img = cv2.imread('1256.jpg')
-    # print(img.shape)
-# img = cv2.resize(img, dsize=(224,224), interpolation=cv2.INTER_CUBIC)
-# cv2.imshow('aaa',img)
+            labels_output = roi_pool(tm,bbb)
+            # print('label shape',labels_output.shape)
 
-    # img = np.expand_dims(img.T, axis=0)
-    # print(img.shape)
-    # inp = torch.from_numpy(img)
-    # inp = inp.type(torch.FloatTensor)
+            # Xoá giá trị đạo hàm
+            optimizer.zero_grad()
 
-#
-# def imshow(img):
-#     img = img / 2 + 0.5     # Ánh xạ giá trị lại khoảng [0, 1].
-#     npimg = img.numpy()
-#     plt.imshow(np.transpose(npimg, (1, 2, 0)))
-#     plt.show()
-#+++++++++++++
-dataiter = iter(dataloader)
-sample = dataiter.next()
-sam = sample['image']
-bbb = sample['bb']
-# print(sam)
-print(bbb)
-bbb=bbb.view(-1, 5)
-sam, bbb = sam.to(device),bbb.to(device)
-# # imshow(torchvision.utils.make_grid(images))
-# print(type(images))
-# print(type(inp))
-# # print(labels)
-net = MyRRN()
-# print(net)
-net.to(device)
-# #
-# #
-out = net(sam,bbb)
-print(out.shape)
+            # Tính giá trị tiên đoán, đạo hàm, và dùng bộ tối ưu hoá để cập nhật trọng số.
+            out_RRN = RRN_net(sam,bbb)
+            # print('output RRN',out_RRN.shape)
+            loss = criterion(out_RRN, labels_output)
+            print('loss at {}: '.format(i),loss.item())
+            loss.backward()
+            optimizer.step()
 
-criterion = nn.MSELoss()
-optimizer = optim.SGD(net.parameters(), lr=0.000000001, momentum=0.9)
-
-showTensor(out)
-# img = res[0]
-# img = img.transpose((1, 2, 0))
-# # print(img.shape)
-# to_pil = torchvision.transforms.ToPILImage()
-# img = to_pil(img)
-# img.show()
-#=========
-# for i in range(1):
-#     img = res[i].transpose((1, 2, 0))
-#     cv2.imshow('aa {}.jpg'.format(i), img)
-# #
-# # plt.plot(img)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
+            # In ra số liệu trong quá trình huấn luyện
+            running_loss += loss.item()
+            if i % 10 == 0:    # In mỗi 2000 mini-batches.
+                print('[%d, %5d] loss: %.3f' %
+                      (epoch + 1, i + 1, running_loss / 10))
+                running_loss = 0.0
+    # torch.save(net.state_dict(), 'modelvgg.ptx')
+    print('Huấn luyện xong')
 
 # paras = list(net.parameters())
 # print(paras[0])
