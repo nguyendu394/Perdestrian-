@@ -10,9 +10,8 @@ from torchvision import transforms, utils
 # import matplotlib.patches as patches
 # from PIL import Image
 from model.roi_layers import ROIPool
-from image_processing import equalizeHist, showTensor
-# sys.path.append('~/pytorch/simple-faster-rcnn-pytorch/')
-#
+from image_processing import equalizeHist, showTensor, showBbs
+import torch.nn as nn
 # Ignore warnings
 import warnings
 warnings.filterwarnings("ignore")
@@ -37,7 +36,7 @@ class MyDataset(Dataset):
                                 self.imgs.iloc[idx,0])
         image = cv2.imread(img_name)
 
-        bbs = self.bb.loc[idx].iloc[:20].reset_index().as_matrix()
+        bbs = self.bb.loc[idx].iloc[:3].reset_index().as_matrix()
         bbs = bbs.astype('float')
 
         tm = cv2.imread(os.path.join(self.ther_path,'set00_V000_lwir_{}'.format(self.imgs.iloc[idx,0])),0)
@@ -57,9 +56,11 @@ class ToTensor(object):
         # swap color axis because
         # numpy image: H x W x C
         # torch image: C X H X W
+        # bbs = bbs.transpose((1,0))
         image = image.transpose((2, 0, 1))
         tm = equalizeHist(tm)
         tm = np.expand_dims(tm, axis=0)
+
         return {'image': torch.from_numpy(image).type('torch.FloatTensor'),
                 'bb': torch.from_numpy(bbs).type('torch.FloatTensor'),
                 'tm': torch.from_numpy(tm).type('torch.FloatTensor')}
@@ -71,11 +72,15 @@ if __name__ == '__main__':
     ROIS_CSV = 'mydata/rois_set00_v000.csv'
     my_transform = ToTensor()
     device = torch.device("cuda:0")
+    params = {'batch_size':5,
+              'shuffle':False,
+              'num_workers':24}
+
+
     my_dataset = MyDataset(imgs_csv=IMGS_CSV,rois_csv=ROIS_CSV,
     root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = my_transform)
 
-    dataloader = DataLoader(my_dataset, batch_size=5,
-    shuffle=True, num_workers=1)
+    dataloader = DataLoader(my_dataset, **params)
 
     # data_frame = pd.read_csv('data/1256.csv')
     # img_id = data_frame.iloc[0,0]
@@ -84,15 +89,27 @@ if __name__ == '__main__':
     sample = dataiter.next()
     sam = sample['image']
     bbb = sample['bb']
-    tm = sample['tm']
-    print(sam.shape)
-    print(bbb.shape)
-    print(tm.shape)
+    
+
+    # tm = sample['tm']
+    # print(sam.shape)
+    # print(bbb.shape)
+    # print(tm.shape)
     # roi_pool = ROIPool((50, 50), 1)
-    # sam, bbb = sam.to(device),bbb.to(device)
+    # # print(bbs.shape)
+    # # exit()
+    # bbb=bbb.view(-1, 5)
+    # #reset id
+    # bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
+    # tm, bbb = tm.to(device),bbb.to(device)
+    #
     # # # #
-    # out = roi_pool(sam,bbb)
-    showTensor(tm)
+    # criterion = nn.MSELoss()
+    #
+    # out = roi_pool(tm,bbb)
+    # loss = criterion(out, out)
+    # print(loss.item())
+    # showTensor(out)
 
 
 

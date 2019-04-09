@@ -49,6 +49,7 @@ def convertRoisACF2CSV(path,new):
     '''
     with open(path,'r') as f:
         data = f.readlines()
+
     for i in data:
         id,l,t,w,h,s = i.split(',')
         id = int(id) - 1
@@ -78,6 +79,18 @@ def showTensor(out):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+def showBbs(img, bbs):
+    '''
+        Draw region proposal into images
+        input: image
+               bbs(Tensor) nxlxtxrxb
+    '''
+
+def main():
+    bbs_csv = 'mydata/rois_train_thr70.csv'
+    bbs = pd.read_csv(bbs_csv)
+    bbs.set_index('id', inplace=True)
+    # aa = bbs.loc[210].reset_index().as_matrix()
+    # #
 if __name__ == '__main__':
-    # PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/images/set00/V000/visible/'
-    convertRoisACF2CSV('mydata/Dets_TH2_Thr-70_Cal0005.txt','mydata/rois_set00_v000.txt')
+    main()

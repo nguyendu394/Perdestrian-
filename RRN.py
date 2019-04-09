@@ -13,12 +13,12 @@ import vgg, cv2
 from mydataset import MyDataset, ToTensor
 from image_processing import showTensor
 
-raw_vgg13 = vgg.vgg16(pretrained=True)
+raw_vgg16 = vgg.vgg16(pretrained=True)
 
 class MyRRN(nn.Module):
     def __init__(self):
         super(MyRRN, self).__init__()
-        self.features = raw_vgg13.features
+        self.features = raw_vgg16.features
         self.roi_pool = ROIPool((7, 7), 1/16)
         self.deconv1 = nn.ConvTranspose2d(in_channels=512,out_channels=64,kernel_size=4,stride=8, padding=1)
         self.conv1 = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=3, padding=1)
@@ -49,33 +49,37 @@ class MyRRN(nn.Module):
 # testloader = torch.utils.data.DataLoader(testset, batch_size=1,
 #                                          shuffle=False, num_workers=2)
 
-if __name__ == '__main__':
+def main():
     THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
     ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/images/set00/V000/visible'
     IMGS_CSV = 'mydata/imgs_name_set00_v000.csv'
     ROIS_CSV = 'mydata/rois_set00_v000.csv'
-    BZ = 1 #batch size
-    EPOCH = 1
+
+    params = {'batch_size': 5,
+          'shuffle': False,
+          'num_workers': 24}
+    max_epoch = 10
     LR = 0.000000001 #learning rate
     MT = 0.9 #momentum
 
     device = torch.device("cuda:0")
+    # cudnn.benchmark = True
     transform = ToTensor()
 
     my_dataset = MyDataset(imgs_csv=IMGS_CSV,rois_csv=ROIS_CSV,
     root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = transform)
 
-    dataloader = DataLoader(my_dataset, batch_size=BZ,
-    shuffle=True, num_workers=1)
+    dataloader = DataLoader(my_dataset, **params)
 
     RRN_net = MyRRN()
-    # print(net)
+    print(RRN_net)
+    input()
     RRN_net.to(device)
 
     criterion = nn.MSELoss()
     optimizer = optim.SGD(RRN_net.parameters(), lr=LR, momentum=MT)
 
-    for epoch in range(EPOCH):  # Lặp qua bộ dữ liệu huấn luyện nhiều lần
+    for epoch in range(max_epoch):  # Lặp qua bộ dữ liệu huấn luyện nhiều lần
         running_loss = 0.0
         for i, data in enumerate(dataloader):
             # Lấy dữ liệu
@@ -85,6 +89,8 @@ if __name__ == '__main__':
             bbb=bbb.view(-1, 5)
             #reset id
             bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
+            print(bbb)
+            input("AAAA")
             tm = sample['tm']
             # print(sam.shape)
             # print(bbb.shape)
@@ -113,8 +119,10 @@ if __name__ == '__main__':
                 print('[%d, %5d] loss: %.3f' %
                       (epoch + 1, i + 1, running_loss / 10))
                 running_loss = 0.0
-    # torch.save(net.state_dict(), 'modelvgg.ptx')
+    torch.save(net.state_dict(), 'firstmodel.ptx')
     print('Huấn luyện xong')
 
+if __name__ == '__main__':
+    main()
 # paras = list(net.parameters())
 # print(paras[0])
