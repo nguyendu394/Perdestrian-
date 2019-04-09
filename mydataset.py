@@ -89,7 +89,7 @@ if __name__ == '__main__':
     sample = dataiter.next()
     sam = sample['image']
     bbb = sample['bb']
-    
+
 
     # tm = sample['tm']
     # print(sam.shape)
@@ -98,11 +98,11 @@ if __name__ == '__main__':
     # roi_pool = ROIPool((50, 50), 1)
     # # print(bbs.shape)
     # # exit()
-    # bbb=bbb.view(-1, 5)
+    bbb=bbb.view(-1, 5)
     # #reset id
     # bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
     # tm, bbb = tm.to(device),bbb.to(device)
-    #
+    print(bbb.shape)
     # # # #
     # criterion = nn.MSELoss()
     #
