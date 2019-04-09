@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 import os
+import pandas as pd
 
 def equalizeHist(img):
     clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(8, 8))
@@ -32,7 +33,7 @@ def createImgsFilesName(path,name_file):
     '''
         Create a txt file with name of images in dir path
     '''
-    a = list(os.walk(ROOT_DIR))
+    a = list(os.walk(path))
     a[0][2].sort()
     print('Lenght: ',len(a[0][2]))
     for name in a[0][2]:
@@ -82,15 +83,29 @@ def showTensor(out):
 def showBbs(img, bbs):
     '''
         Draw region proposal into images
-        input: image
+        input: image(numpy)
                bbs(Tensor) nxlxtxrxb
     '''
+    for d in bbs:
+        l,t,r,b = d
+        img = cv2.rectangle(img,(int(l),int(t)),(int(r),int(b)),(0,255,0),1)
+
+    cv2.imshow('sss', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
 
 def main():
+    img = cv2.imread('I01793.jpg')
     bbs_csv = 'mydata/rois_train_thr70.csv'
     bbs = pd.read_csv(bbs_csv)
     bbs.set_index('id', inplace=True)
-    # aa = bbs.loc[210].reset_index().as_matrix()
-    # #
+    bbs = bbs.loc[1793].as_matrix()
+    showBbs(img, bbs)
+
+
+
 if __name__ == '__main__':
-    main()
+    # main()
+    path = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/images/train/images_train'
+    createImgsFilesName(path, 'ims_train.txt')
