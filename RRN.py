@@ -55,7 +55,7 @@ def main():
     IMGS_CSV = 'mydata/imgs_train.csv'
     ROIS_CSV = 'mydata/rois_train_thr70.csv'
 
-    params = {'batch_size': 3,
+    params = {'batch_size': 7,
           'shuffle': True,
           'num_workers': 24}
     max_epoch = 10
@@ -73,6 +73,7 @@ def main():
 
     RRN_net = MyRRN()
     RRN_net.to(device)
+    RRN_net.load_state_dict(torch.load('models/model_lr_10^-9_bz_6_epoch_9.ptx'))
 
     criterion = nn.MSELoss()
     optimizer = optim.SGD(RRN_net.parameters(), lr=LR, momentum=MT)
@@ -87,17 +88,16 @@ def main():
             bbb = sample['bb']
             bbb=bbb.view(-1, 5)
             #reset id
-            bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
-            # idx = -1
-            # for i,v in enumerate(bbb[:,0]):
-            #     if not i%3:
-            #         idx = idx + 1
-            #     bbb[i,0] = idx
+            # bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
+
+            idx = -1
+            for j,v in enumerate(bbb[:,0]):
+                if not j%15:
+                    idx = idx + 1
+                bbb[j,0] = idx
 
 
             tm = sample['tm']
-            # print(bbb)
-            # input('press')
             # print(bbb.shape)
             # print(tm.shape)
             sam,bbb,tm = sam.to(device), bbb.to(device), tm.to(device)
@@ -121,10 +121,13 @@ def main():
             # In ra số liệu trong quá trình huấn luyện
             running_loss += loss.item()
             if i % 10 == 9:    # In mỗi 2000 mini-batches.
-                print('[{}, {}] loss: {:.3f}  time: {}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st))
+                text = '[{}, {}] loss: {:.3f}  time: {}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
+                print(text)
+                with open('log.txt','a') as f:
+                    f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(RRN_net.state_dict(), 'model_lr_10^-9_bz_6_epoch_{}.ptx'.format(epoch))
+        torch.save(RRN_net.state_dict(), 'model3_lr_10^-9_bz_6_epoch_{}.ptx'.format(epoch))
         print("Saved model")
     print('Huấn luyện xong')
 
