@@ -3,30 +3,36 @@ import numpy as np
 from matplotlib import pyplot as plt
 import os
 import pandas as pd
+from skimage import io, color
 
 def equalizeHist(img):
+    img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(8, 8))
     claheImg = clahe.apply(img)
     # claheImg = cv2.equalizeHist(img)
     claheImg = cv2.fastNlMeansDenoising(claheImg,None,4,7,21)
 
     return claheImg
-
 def visualizeRP(img,bbs, fm = 'ltrb',c = 255):
     '''
     Visualize region proposal
     input: img (numpy) WxHxC
-           bbs (numpy) ltwh/ltrb
+           bbs (tensor) ltwh/ltrb bzxnx5
     '''
+    bbs = bbs.type('torch.IntTensor')
+    bbs = bbs.cpu()
+    bbs = bbs.view(-1,5)
+    bbs = bbs.detach().numpy()
+
     for d in bbs:
         id,l,t,r,b = d
-        if format == 'ltrb':
+        # print(l,t,r,b)
+        if fm == 'ltrb':
             img = cv2.rectangle(img,(l,t),(r,b),(0,c,0),1)
-        elif format == 'ltwh':
+
+        elif fm == 'ltwh':
             img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,0),1)
             # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        # cv2.putText(img,name,(l,t-5),font, 0.5,(0,255,0),1,cv2.LINE_AA)
     return img
 
 def createImgsFilesName(path,name_file):
@@ -61,24 +67,23 @@ def convertRoisACF2CSV(path,new):
 
     print('Done!')
 
-def showTensor(out):
+def convertTensor2Img(out):
     '''
     Visualize a Tensors
     input: a Tensors on cpu (1x1xhxw)
+    output: a image(numpy)
     '''
     out = out.type('torch.ByteTensor')
     out = out.cpu()
     out = out.detach().numpy()
-    img1 = out[0].transpose((1, 2, 0))
+    if len(out.shape) == 4:
+        img1 = out[0].transpose((1, 2, 0))
+    elif len(out.shape) == 3:
+        img1 = out.transpose((1, 2, 0))
     # img2 = out[-1].transpose((1, 2, 0))
     # img3 = out[3].transpose((1, 2, 0))
     #
-    #
-    cv2.imshow('sss1', img1)
-    # cv2.imshow('sss2', img2)
-    # cv2.imshow('sss3', img3)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    return img1
 
 def showBbs(img, bbs):
     '''
@@ -107,5 +112,17 @@ def main():
 
 if __name__ == '__main__':
     # main()
-    path = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/images/train/images_train'
-    createImgsFilesName(path, 'ims_train.txt')
+    path = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm'
+    img = io.imread(os.path.join(path,'set05_V000_lwir_I02899.jpg'))
+    # img = img[:,:,::-1]
+    # img = color.rgb2gray(img)
+    # img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    # print(img.shape)
+    # img = img_as_ubyte(img)
+    # img = img[:,:,::-1]
+    img = equalizeHist(img)
+    io.imshow(img)
+    plt.show()
+    # cv2.imshow('aa',img)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()

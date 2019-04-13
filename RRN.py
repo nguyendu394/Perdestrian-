@@ -10,8 +10,11 @@ import torch.optim as optim
 from model.roi_layers import ROIPool
 
 import vgg, cv2, time
-from mydataset import MyDataset, ToTensor
-from image_processing import showTensor
+from mydataset import MyDataset, ToTensor, RandomHorizontalFlip, Normalize
+# from image_processing import showTensor
+
+rgb_mean = (0.4914, 0.4822, 0.4465)
+rgb_std = (0.2023, 0.1994, 0.2010)
 
 raw_vgg16 = vgg.vgg16(pretrained=True)
 
@@ -33,22 +36,12 @@ class MyRRN(nn.Module):
         x = self.conv1(x)
         return x
 
-
-
 # transform = transforms.Compose(
 #     [transforms.ToTensor(),
 #      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-# trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
-#                                         download=True, transform=transform)
-# trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
-#                                           shuffle=True, num_workers=2)
 
-# testset = torchvision.datasets.CIFAR10(root='./data', train=False,
-#                                        download=True, transform=transform)
-#
-# testloader = torch.utils.data.DataLoader(testset, batch_size=1,
-#                                          shuffle=False, num_workers=2)
-
+def train():
+    pass
 def main():
     THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
     ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
@@ -56,15 +49,17 @@ def main():
     ROIS_CSV = 'mydata/rois_train_thr70.csv'
 
     params = {'batch_size': 7,
-          'shuffle': True,
+          'shuffle': False,
           'num_workers': 24}
     max_epoch = 10
-    LR = 0.000000001 #learning rate
+    LR = 1e-9 #learning rate
     MT = 0.9 #momentum
 
     device = torch.device("cuda:0")
     # cudnn.benchmark = True
-    transform = ToTensor()
+    # transform = ToTensor()
+    transform=transforms.Compose([RandomHorizontalFlip(),
+                                  ToTensor()])
 
     my_dataset = MyDataset(imgs_csv=IMGS_CSV,rois_csv=ROIS_CSV,
     root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = transform)
@@ -73,7 +68,7 @@ def main():
 
     RRN_net = MyRRN()
     RRN_net.to(device)
-    RRN_net.load_state_dict(torch.load('models/model_lr_10^-9_bz_6_epoch_9.ptx'))
+    RRN_net.load_state_dict(torch.load('models/model4/model4_lr_10^-9_bz_7_False_epoch_9.ptx'))
 
     criterion = nn.MSELoss()
     optimizer = optim.SGD(RRN_net.parameters(), lr=LR, momentum=MT)
@@ -88,13 +83,13 @@ def main():
             bbb = sample['bb']
             bbb=bbb.view(-1, 5)
             #reset id
-            # bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
+            bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
 
-            idx = -1
-            for j,v in enumerate(bbb[:,0]):
-                if not j%15:
-                    idx = idx + 1
-                bbb[j,0] = idx
+            #idx = -1
+            #for j,v in enumerate(bbb[:,0]):
+            #    if not j%15:
+            #        idx = idx + 1
+            #    bbb[j,0] = idx
 
 
             tm = sample['tm']
@@ -121,13 +116,13 @@ def main():
             # In ra số liệu trong quá trình huấn luyện
             running_loss += loss.item()
             if i % 10 == 9:    # In mỗi 2000 mini-batches.
-                text = '[{}, {}] loss: {:.3f}  time: {}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
+                text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
                 print(text)
-                with open('log.txt','a') as f:
+                with open('log7.txt','a') as f:
                     f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(RRN_net.state_dict(), 'model3_lr_10^-9_bz_6_epoch_{}.ptx'.format(epoch))
+        torch.save(RRN_net.state_dict(), 'model7_lr_1e-9_bz_7_data_False_epoch_{}.ptx'.format(epoch))
         print("Saved model")
     print('Huấn luyện xong')
 
