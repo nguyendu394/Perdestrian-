@@ -19,7 +19,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 plt.ion()   # interactive mode
-NUM_BBS = 15
+# NUM_BBS = 15
 rgb_mean = (0.4914, 0.4822, 0.4465)
 rgb_std = (0.2023, 0.1994, 0.2010)
 
@@ -42,7 +42,7 @@ class MyDataset(Dataset):
                                 self.imgs.iloc[idx,0])
         image = cv2.imread(img_name)
 
-        bbs = self.bb.loc[idx].iloc[:NUM_BBS].reset_index().as_matrix()
+        bbs = self.bb.loc[idx].iloc[:].reset_index().as_matrix()
         bbs = bbs.astype('float')
 
         tm = cv2.imread(os.path.join(self.ther_path,self.imgs.iloc[idx,0].replace('visible','lwir')))
@@ -99,8 +99,8 @@ class ToTensor(object):
         # torch image: C X H X W
         # bbs = bbs.transpose((1,0))
 
-        while bbs.shape[0] < NUM_BBS:
-            bbs = np.concatenate((bbs,bbs))
+        # while bbs.shape[0] < NUM_BBS:
+        #     bbs = np.concatenate((bbs,bbs))
         image = np.array(image)
         tm = np.array(tm)
         image = image.transpose((2, 0, 1))
@@ -109,7 +109,7 @@ class ToTensor(object):
         tm = np.expand_dims(tm, axis=0)
 
         return {'image': torch.from_numpy(image).type('torch.FloatTensor'),
-                'bb': torch.from_numpy(bbs[:NUM_BBS]).type('torch.FloatTensor'),
+                'bb': torch.from_numpy(bbs[:]).type('torch.FloatTensor'),
                 'tm': torch.from_numpy(tm).type('torch.FloatTensor')}
 
 class RandomHorizontalFlip(object):
@@ -176,10 +176,10 @@ if __name__ == '__main__':
     IMGS_CSV = 'mydata/imgs_train.csv'
     ROIS_CSV = 'mydata/rois_train_thr70.csv'
     my_transform = ToTensor()
-    transform=transforms.Compose([RandomHorizontalFlip(),
-                                  ToTensor()])
+    # transform=transforms.Compose([RandomHorizontalFlip(),
+    #                               ToTensor()])
     device = torch.device("cuda:0")
-    params = {'batch_size':2,
+    params = {'batch_size':3,
               'shuffle':True,
               'num_workers':24}
 
@@ -188,9 +188,10 @@ if __name__ == '__main__':
     root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = my_transform)
     print(my_dataset.__len__())
     dataloader = DataLoader(my_dataset, **params)
-    count = 0
-    for epoch in range(3):
-        print(len(dataloader))  # Lặp qua bộ dữ liệu huấn luyện nhiều lần
+    dataiter = iter(dataloader)
+    sample = dataiter.next()
+    print(sample['bb'].shape)
+ # Lặp qua bộ dữ liệu huấn luyện nhiều lần
         # for i, data in enumerate(dataloader):
         #     count = count + 1
         #     print(count)

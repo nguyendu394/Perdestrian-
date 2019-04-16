@@ -89,15 +89,13 @@ def showBbs(img, bbs):
     '''
         Draw region proposal into images
         input: image(numpy)
-               bbs(Tensor) nxlxtxrxb
+               bbs(Tensor) nx4 (l,t,r,b)
     '''
     for d in bbs:
         l,t,r,b = d
         img = cv2.rectangle(img,(int(l),int(t)),(int(r),int(b)),(0,255,0),1)
 
-    cv2.imshow('sss', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    return img
 
 
 def main():
@@ -108,21 +106,31 @@ def main():
     bbs = bbs.loc[1793].as_matrix()
     showBbs(img, bbs)
 
+def readLogFile(text):
+    val = []
+    st = 10
+    with open(text,'r') as f:
+        data = f.readlines()
+    iters = list(range(10, (len(data)+1)*10,10))
+    for d in data:
+        val.append(float(d.split()[3]))
+    return iters, val
 
+
+def visualizeErrorLoss(true_txt, false_txt):
+    t_iter, t_val = readLogFile(true_txt)
+    f_iter, f_val = readLogFile(false_txt)
+    print(len(t_iter), len(f_iter))
+
+    plt.plot(t_iter, t_val, color='g')
+    plt.plot(f_iter, f_val, color='orange')
+    plt.xlabel('iter')
+    plt.ylabel('L2 loss');
+    plt.title('error loss')
+    plt.show()
 
 if __name__ == '__main__':
     # main()
-    path = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm'
-    img = io.imread(os.path.join(path,'set05_V000_lwir_I02899.jpg'))
-    # img = img[:,:,::-1]
-    # img = color.rgb2gray(img)
-    # img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    # print(img.shape)
-    # img = img_as_ubyte(img)
-    # img = img[:,:,::-1]
-    img = equalizeHist(img)
-    io.imshow(img)
-    plt.show()
-    # cv2.imshow('aa',img)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    true_txt = './models/model6/log6.txt'
+    false_txt = './models/model7/log7.txt'
+    visualizeErrorLoss(true_txt,false_txt)

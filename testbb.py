@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+from image_processing import showBbs
 
 ID = 'I01445'
 GT_PATH = './mydata/{}.txt'.format(ID)

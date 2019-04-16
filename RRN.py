@@ -42,6 +42,10 @@ class MyRRN(nn.Module):
 
 def train():
     pass
+def test():
+    RRN_net = MyRRN()
+    print(RRN_net)
+
 def main():
     THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
     ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
@@ -49,7 +53,7 @@ def main():
     ROIS_CSV = 'mydata/rois_train_thr70.csv'
 
     params = {'batch_size': 7,
-          'shuffle': False,
+          'shuffle': True,
           'num_workers': 24}
     max_epoch = 10
     LR = 1e-9 #learning rate
@@ -83,13 +87,13 @@ def main():
             bbb = sample['bb']
             bbb=bbb.view(-1, 5)
             #reset id
-            bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
+            # bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
 
-            #idx = -1
-            #for j,v in enumerate(bbb[:,0]):
-            #    if not j%15:
-            #        idx = idx + 1
-            #    bbb[j,0] = idx
+            idx = -1
+            for j,v in enumerate(bbb[:,0]):
+                if not j%15:
+                    idx = idx + 1
+                bbb[j,0] = idx
 
 
             tm = sample['tm']
@@ -118,11 +122,11 @@ def main():
             if i % 10 == 9:    # In mỗi 2000 mini-batches.
                 text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
                 print(text)
-                with open('log7.txt','a') as f:
+                with open('log6.txt','a') as f:
                     f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(RRN_net.state_dict(), 'model7_lr_1e-9_bz_7_data_False_epoch_{}.ptx'.format(epoch))
+        torch.save(RRN_net.state_dict(), 'model6_lr_1e-9_bz_7_data_True_epoch_{}.ptx'.format(epoch))
         print("Saved model")
     print('Huấn luyện xong')
 
