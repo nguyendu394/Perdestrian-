@@ -12,16 +12,16 @@ import torchvision.transforms.functional as TF
 # from PIL import Image
 import random
 from model.roi_layers import ROIPool
-from image_processing import equalizeHist, convertTensor2Img, showBbs,visualizeRP
+from image_processing import equalizeHist, convertTensor2Img, showBbs,visualizeRP, resizeThermal
 import torch.nn as nn
 # Ignore warnings
 import warnings
 warnings.filterwarnings("ignore")
 
 plt.ion()   # interactive mode
-# NUM_BBS = 15
-rgb_mean = (0.4914, 0.4822, 0.4465)
-rgb_std = (0.2023, 0.1994, 0.2010)
+NUM_BBS = 4
+rgb_mean = (0.485, 0.456, 0.406)
+rgb_std = (0.229, 0.224, 0.225)
 
 class MyDataset(Dataset):
     """docstring for MyDataset."""
@@ -40,12 +40,12 @@ class MyDataset(Dataset):
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir,
                                 self.imgs.iloc[idx,0])
-        image = cv2.imread(img_name)
+        image = io.imread(img_name)
 
-        bbs = self.bb.loc[idx].iloc[:].reset_index().as_matrix()
+        bbs = self.bb.loc[idx].iloc[:NUM_BBS].reset_index().as_matrix()
         bbs = bbs.astype('float')
 
-        tm = cv2.imread(os.path.join(self.ther_path,self.imgs.iloc[idx,0].replace('visible','lwir')))
+        tm = io.imread(os.path.join(self.ther_path,self.imgs.iloc[idx,0].replace('visible','lwir')))
         sample = {'image': image, 'bb': bbs, 'tm':tm}
 
         if self.transform:
@@ -99,17 +99,19 @@ class ToTensor(object):
         # torch image: C X H X W
         # bbs = bbs.transpose((1,0))
 
-        # while bbs.shape[0] < NUM_BBS:
-        #     bbs = np.concatenate((bbs,bbs))
+        while bbs.shape[0] < NUM_BBS:
+            bbs = np.concatenate((bbs,bbs))
         image = np.array(image)
-        tm = np.array(tm)
         image = image.transpose((2, 0, 1))
 
+        tm = np.array(tm,dtype='uint8')
         tm = equalizeHist(tm)
-        tm = np.expand_dims(tm, axis=0)
+        # print(type(tm[0][0][0]))
+        # print(type(tm))
+        tm = tm.transpose((2, 0, 1))
 
         return {'image': torch.from_numpy(image).type('torch.FloatTensor'),
-                'bb': torch.from_numpy(bbs[:]).type('torch.FloatTensor'),
+                'bb': torch.from_numpy(bbs[:NUM_BBS]).type('torch.FloatTensor'),
                 'tm': torch.from_numpy(tm).type('torch.FloatTensor')}
 
 class RandomHorizontalFlip(object):
@@ -176,21 +178,24 @@ if __name__ == '__main__':
     IMGS_CSV = 'mydata/imgs_train.csv'
     ROIS_CSV = 'mydata/rois_train_thr70.csv'
     my_transform = ToTensor()
-    # transform=transforms.Compose([RandomHorizontalFlip(),
-    #                               ToTensor()])
+    full_transform=transforms.Compose([RandomHorizontalFlip(p=5),
+                                       ToTensor(),])
+                                  # Normalize(rgb_mean,rgb_std)])
+
     device = torch.device("cuda:0")
-    params = {'batch_size':3,
+    params = {'batch_size':2,
               'shuffle':True,
               'num_workers':24}
 
 
     my_dataset = MyDataset(imgs_csv=IMGS_CSV,rois_csv=ROIS_CSV,
-    root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = my_transform)
+    root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = full_transform)
     print(my_dataset.__len__())
     dataloader = DataLoader(my_dataset, **params)
     dataiter = iter(dataloader)
     sample = dataiter.next()
-    print(sample['bb'].shape)
+    # sample = my_dataset[789]
+
  # Lặp qua bộ dữ liệu huấn luyện nhiều lần
         # for i, data in enumerate(dataloader):
         #     count = count + 1
@@ -203,15 +208,18 @@ if __name__ == '__main__':
     # # data_frame = pd.read_csv('data/1256.csv')
     # # img_id = data_frame.iloc[0,0]
     #
-    # # dataiter = iter(dataloader)
-    # # sample = dataiter.next()
-    # sam = sample['image']
-    # bbb = sample['bb']
-    # tm = sample['tm']
-    # # showBbs(sam,bbb)
-    # raw = convertTensor2Img(sam)
-    # ther = convertTensor2Img(tm)
+    # dataiter = iter(dataloader)
+    # sample = dataiter.next()
+    sam = sample['image']
+    bbb = sample['bb']
+    tm = sample['tm']
+
+
+    # raw = convertTensor2Img(sam,1)
+    # ther = convertTensor2Img(tm,0)
     # bbs = visualizeRP(raw, bbb)
+
+    #
     # cv2.imshow('raw',raw)
     # cv2.imshow('thermal', ther)
     # cv2.imshow('bbs', bbs)
@@ -222,19 +230,36 @@ if __name__ == '__main__':
     # print(sam.shape)
     # print(bbb.shape)
     # print(tm.shape)
-    # roi_pool = ROIPool((50, 50), 1)
-    # # print(bbs.shape)
+    bbb = bbb.view(-1,5)
+    idx = -1
+    for i,v in enumerate(bbb[:,0]):
+        if not i%NUM_BBS:
+            idx = idx + 1
+        bbb[i,0] = idx
+    # bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
+
+    # ther = convertTensor2Img(tm,0)
+    labels_output = resizeThermal(tm, bbb)
+    print(labels_output.shape)
+    # for ind,labels in enumerate(labels_output):
+    #     print(labels.shape)
+    #     cv2.imshow('bbs{}'.format(ind), labels)
+    # for i,p in enumerate(labels_output):
+    #     print(p.shape)
+        # cv2.imshow('bba{}'.format(i), p)
+    # # tmm = cv2.resize(labels_output, (50,50))
+    # cv2.imshow('bbbb', tmm)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+    roi_pool = ROIPool((50, 50), 1)
+    tm, bbb = tm.to(device),bbb.to(device)
+    labels_output = roi_pool(tm,bbb)
+    print(labels_output.shape)
     # # exit()
     # bbb=bbb.view(-1, 5)
     # bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
     # #reset id
-    # tm, bbb = tm.to(device),bbb.to(device)
     # tmp = set()
-    # idx = -1
-    # for i,v in enumerate(bbb[:,0]):
-    #     if not i%3:
-    #         idx = idx + 1
-    #     bbb[i,0] = idx
 
     # idx = -1
     # print(bbb)

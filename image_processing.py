@@ -3,16 +3,21 @@ import numpy as np
 from matplotlib import pyplot as plt
 import os
 import pandas as pd
-from skimage import io, color
+from skimage import io, color, exposure,restoration
+from PIL import Image
+import torch
 
 def equalizeHist(img):
-    img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(8, 8))
-    claheImg = clahe.apply(img)
+    # img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    # clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(8, 8))
+    # img = clahe.apply(img)
+    # img = color.rgb2hsv(img)
+    img = exposure.equalize_adapthist(img,clip_limit=0.03)
+    img = restoration.denoise_tv_chambolle(img , weight=0.1)
     # claheImg = cv2.equalizeHist(img)
-    claheImg = cv2.fastNlMeansDenoising(claheImg,None,4,7,21)
+    # img = cv2.fastNlMeansDenoising(img,None,4,7,21)
 
-    return claheImg
+    return img
 def visualizeRP(img,bbs, fm = 'ltrb',c = 255):
     '''
     Visualize region proposal
@@ -67,23 +72,42 @@ def convertRoisACF2CSV(path,new):
 
     print('Done!')
 
-def convertTensor2Img(out):
+def convertTensor2Img(out,k):
     '''
     Visualize a Tensors
     input: a Tensors on cpu (1x1xhxw)
     output: a image(numpy)
     '''
-    out = out.type('torch.ByteTensor')
+    if k:
+        out = out.type('torch.ByteTensor')
     out = out.cpu()
     out = out.detach().numpy()
+    # print(type(out[0][0][0][0]))
     if len(out.shape) == 4:
-        img1 = out[0].transpose((1, 2, 0))
+        img = out[0].transpose((1, 2, 0))
     elif len(out.shape) == 3:
-        img1 = out.transpose((1, 2, 0))
-    # img2 = out[-1].transpose((1, 2, 0))
-    # img3 = out[3].transpose((1, 2, 0))
-    #
-    return img1
+        img = out.transpose((1, 2, 0))
+    return img
+
+def resizeThermal(img,rois):
+    tm_croppeds = []
+
+    rois = rois.type('torch.IntTensor')
+    img = img.cpu()
+    # img = img.type('torch.ByteTensor')
+    img = img.detach().numpy()
+
+    for roi in rois:
+        id,y1,x1,y2,x2 = roi
+
+        x1 = max(x1,0)
+        y1 = max(y1,0)
+
+        tm_cropped = img[id].transpose((1, 2, 0))
+        tm_cropped = tm_cropped[x1:x2,y1:y2]
+        tm_cropped = cv2.resize(tm_cropped, (50,50)).transpose((2,0,1))
+        tm_croppeds.append(tm_cropped)
+    return torch.from_numpy(np.array(tm_croppeds)).type('torch.FloatTensor')
 
 def showBbs(img, bbs):
     '''
@@ -134,3 +158,20 @@ if __name__ == '__main__':
     true_txt = './models/model6/log6.txt'
     false_txt = './models/model7/log7.txt'
     visualizeErrorLoss(true_txt,false_txt)
+    # path = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm'
+    # # img = io.imread(os.path.join(path,'set05_V000_lwir_I02899.jpg'))
+    #
+    # img = io.imread(os.path.join(path,'set03_V000_lwir_I01000.jpg'))
+    # # img = img[:,:,::-1]
+    # # img = color.rgb2gray(img)
+    # # img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    # # print(img.shape)
+    # # img = img_as_ubyte(img)
+    # # img = img[:,:,::-1]
+    # img = equalizeHist(img)
+    # io.imshow(img)
+    #
+    # plt.show()
+    # cv2.imshow('aa',img)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()

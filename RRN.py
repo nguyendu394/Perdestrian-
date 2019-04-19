@@ -10,7 +10,7 @@ import torch.optim as optim
 from model.roi_layers import ROIPool
 
 import vgg, cv2, time
-from mydataset import MyDataset, ToTensor, RandomHorizontalFlip, Normalize
+from mydataset import MyDataset, ToTensor, RandomHorizontalFlip, Normalize, resizeThermal
 # from image_processing import showTensor
 
 rgb_mean = (0.4914, 0.4822, 0.4465)
@@ -62,11 +62,12 @@ def main():
     device = torch.device("cuda:0")
     # cudnn.benchmark = True
     # transform = ToTensor()
-    transform=transforms.Compose([RandomHorizontalFlip(),
-                                  ToTensor()])
+    full_transform=transforms.Compose([RandomHorizontalFlip(),
+                                       ToTensor(),
+                                  Normalize(rgb_mean,rgb_std)])
 
     my_dataset = MyDataset(imgs_csv=IMGS_CSV,rois_csv=ROIS_CSV,
-    root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = transform)
+    root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = full_transform)
 
     dataloader = DataLoader(my_dataset, **params)
 
@@ -101,9 +102,11 @@ def main():
             # print(tm.shape)
             sam,bbb,tm = sam.to(device), bbb.to(device), tm.to(device)
 
-            roi_pool = ROIPool((50, 50), 1/1)
+            # roi_pool = ROIPool((50, 50), 1/1)
 
-            labels_output = roi_pool(tm,bbb)
+            # labels_output = roi_pool(tm,bbb)
+            labels_output = resizeThermal(tm, bbb)
+            labels_output = labels_output.to(device)
             # print('label shape',labels_output.shape)
 
             # Xoá giá trị đạo hàm
@@ -122,11 +125,11 @@ def main():
             if i % 10 == 9:    # In mỗi 2000 mini-batches.
                 text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
                 print(text)
-                with open('log6.txt','a') as f:
+                with open('log7.txt','a') as f:
                     f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(RRN_net.state_dict(), 'model6_lr_1e-9_bz_7_data_True_epoch_{}.ptx'.format(epoch))
+        torch.save(RRN_net.state_dict(), 'model7_lr_1e-9_bz_7_data_True_epoch_{}.ptx'.format(epoch))
         print("Saved model")
     print('Huấn luyện xong')
 
