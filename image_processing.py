@@ -141,13 +141,13 @@ def readLogFile(text):
     return iters, val
 
 
-def visualizeErrorLoss(true_txt, false_txt):
+def visualizeErrorLoss(true_txt, false_txt=None):
+    if false_txt:
+        f_iter, f_val = readLogFile(false_txt)
+        plt.plot(f_iter, f_val, color='g')
     t_iter, t_val = readLogFile(true_txt)
-    f_iter, f_val = readLogFile(false_txt)
-    print(len(t_iter), len(f_iter))
 
-    plt.plot(t_iter, t_val, color='g')
-    plt.plot(f_iter, f_val, color='orange')
+    plt.plot(t_iter, t_val, color='orange')
     plt.xlabel('iter')
     plt.ylabel('L2 loss');
     plt.title('error loss')
@@ -155,9 +155,9 @@ def visualizeErrorLoss(true_txt, false_txt):
 
 if __name__ == '__main__':
     # main()
-    true_txt = './models/model6/log6.txt'
-    false_txt = './models/model7/log7.txt'
-    visualizeErrorLoss(true_txt,false_txt)
+    true_txt = './models/model8/log8.txt'
+    # false_txt = './models/model7/log7.txt'
+    visualizeErrorLoss(true_txt=true_txt)
     # path = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm'
     # # img = io.imread(os.path.join(path,'set05_V000_lwir_I02899.jpg'))
     #
