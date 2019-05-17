@@ -6,22 +6,23 @@ from skimage import io
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
-import torchvision.transforms.functional as TF
+from my_transforms import *
+from torchvision import transforms
+# import torchvision.transforms.functional as TF
 # import matplotlib.patches as patches
 # from PIL import Image
-import random
-from model.roi_layers import ROIPool
-from image_processing import equalizeHist, convertTensor2Img, showBbs,visualizeRP, resizeThermal
+# import random
+# from model.roi_layers import ROIPool
+from image_processing import convertTensor2Img, showBbs,visualizeRP, resizeThermal
 import torch.nn as nn
 # Ignore warnings
 import warnings
 warnings.filterwarnings("ignore")
 
 plt.ion()   # interactive mode
-NUM_BBS = 4
-rgb_mean = (0.485, 0.456, 0.406)
-rgb_std = (0.229, 0.224, 0.225)
+
+rgb_mean = (0.4914, 0.4822, 0.4465)
+rgb_std = (0.2023, 0.1994, 0.2010)
 
 class MyDataset(Dataset):
     """docstring for MyDataset."""
@@ -33,6 +34,8 @@ class MyDataset(Dataset):
         self.root_dir = root_dir
         self.transform = transform
         self.ther_path = ther_path
+        self.gt = None
+        self.NUM_BBS = 128
 
     def __len__(self):
         return len(self.imgs)
@@ -40,150 +43,91 @@ class MyDataset(Dataset):
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir,
                                 self.imgs.iloc[idx,0])
+        gt_name = img_name.replace('images_train', 'annotations_train')
+        gt_name = gt_name.replace('jpg', 'txt')
+
         image = io.imread(img_name)
 
-        bbs = self.bb.loc[idx].iloc[:NUM_BBS].reset_index().as_matrix()
+        bbs = self.bb.loc[idx].iloc[:self.NUM_BBS].reset_index().as_matrix()
         bbs = bbs.astype('float')
 
         tm = io.imread(os.path.join(self.ther_path,self.imgs.iloc[idx,0].replace('visible','lwir')))
-        sample = {'image': image, 'bb': bbs, 'tm':tm}
+        sample = {'image': image, 'bb': bbs, 'tm':tm, 'gt':gt_name}
 
         if self.transform:
             sample = self.transform(sample)
 
         return sample
 
-class ToPILImage(object):
-    """Convert a tensor or an ndarray to PIL Image.
-    Converts a torch.*Tensor of shape C x H x W or a numpy ndarray of shape
-    H x W x C to a PIL Image while preserving the value range.
-    Args:
-        mode (`PIL.Image mode`_): color space and pixel depth of input data (optional).
-            If ``mode`` is ``None`` (default) there are some assumptions made about the input data:
-             - If the input has 4 channels, the ``mode`` is assumed to be ``RGBA``.
-             - If the input has 3 channels, the ``mode`` is assumed to be ``RGB``.
-             - If the input has 2 channels, the ``mode`` is assumed to be ``LA``.
-             - If the input has 1 channel, the ``mode`` is determined by the data type (i.e ``int``, ``float``,
-              ``short``).
-    .. _PIL.Image mode: https://pillow.readthedocs.io/en/latest/handbook/concepts.html#concept-modes
-    """
-    def __init__(self, mode='BGR'):
-        self.mode = mode
 
-    def __call__(self, sample):
-        """
-        Args:
-            pic (Tensor or numpy.ndarray): Image to be converted to PIL Image.
-        Returns:
-            PIL Image: Image converted to PIL Image.
-        """
-        sample['image'] = TF.to_pil_image(sample['image'], self.mode)
-        sample['tm'] = TF.to_pil_image(sample['tm'], self.mode)
-        return sample
+def testResizeThermal(sample,NUM_BBS):
+    sam = sample['image']
+    bbb = sample['bb']
+    tm = sample['tm']
+    gt = sample['gt']
+    bbb=bbb.view(-1, 5)
+    idx = -1
+    for j,v in enumerate(bbb[:,0]):
+        if not j%NUM_BBS:
+            idx = idx + 1
+        bbb[j,0] = idx
 
-    def __repr__(self):
-        format_string = self.__class__.__name__ + '('
-        if self.mode is not None:
-            format_string += 'mode={0}'.format(self.mode)
-        format_string += ')'
-        return format_string
+    labels_output = resizeThermal(tm, bbb)
+    # print(labels_output.size())
+    # labels_output = labels_output.type('torch.ByteTensor')
+    out = labels_output.cpu()
+    out = out.detach().numpy()
+    ther = convertTensor2Img(tm,0)
+    imgg = visualizeRP(ther, bbb)
 
-class ToTensor(object):
-    """Convert ndarrays in sample to Tensors."""
+    cv2.imshow('winname', imgg)
+    for ind,labels in enumerate(out):
+        cv2.imshow('bbs{}'.format(ind), labels.transpose((1, 2, 0)))
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
-    def __call__(self, sample):
-        image, bbs, tm = sample['image'], sample['bb'], sample['tm']
+def testDataset(sample):
+    sam = sample['image']
+    bbb = sample['bb']
+    tm = sample['tm']
+    gt = sample['gt']
+    print(bbb.size())
 
-        # swap color axis because
-        # numpy image: H x W x C
-        # torch image: C X H X W
-        # bbs = bbs.transpose((1,0))
+    # print(sam.shape)
+    # print(bbb.shape)
+    # print(tm.shape)
+    # print(len(gt))
 
-        while bbs.shape[0] < NUM_BBS:
-            bbs = np.concatenate((bbs,bbs))
-        image = np.array(image)
-        image = image.transpose((2, 0, 1))
 
-        tm = np.array(tm,dtype='uint8')
-        tm = equalizeHist(tm)
-        # print(type(tm[0][0][0]))
-        # print(type(tm))
-        tm = tm.transpose((2, 0, 1))
+    # for ind,labels in enumerate(labels_output):
+    #     print(labels.shape)
+    #     cv2.imshow('bbs{}'.format(ind), labels)
+    raw = convertTensor2Img(sam,1)
+    ther = convertTensor2Img(tm,0)
+    bbs = visualizeRP(raw, bbb)
 
-        return {'image': torch.from_numpy(image).type('torch.FloatTensor'),
-                'bb': torch.from_numpy(bbs[:NUM_BBS]).type('torch.FloatTensor'),
-                'tm': torch.from_numpy(tm).type('torch.FloatTensor')}
-
-class RandomHorizontalFlip(object):
-    """Horizontally flip the given PIL Image randomly with a given probability.
-    Args:
-        p (float): probability of the image being flipped. Default value is 0.5
-    """
-
-    def __init__(self, p=0.5):
-        self.p = p
-
-    def __call__(self, sample):
-        """
-        Args:
-            img (PIL Image): Image to be flipped.
-        Returns:
-            PIL Image: Randomly flipped image.
-        """
-        img = TF.to_pil_image(sample['image'], 'RGB')
-        ther = TF.to_pil_image(sample['tm'], 'RGB')
-        if random.random() < self.p:
-            sample['image'] = TF.hflip(img)
-            sample['tm'] = TF.hflip(ther)
-        return sample
-
-    def __repr__(self):
-        return self.__class__.__name__ + '(p={})'.format(self.p)
-
-class Normalize(object):
-    """Normalize a tensor image with mean and standard deviation.
-    Given mean: ``(M1,...,Mn)`` and std: ``(S1,..,Sn)`` for ``n`` channels, this transform
-    will normalize each channel of the input ``torch.*Tensor`` i.e.
-    ``input[channel] = (input[channel] - mean[channel]) / std[channel]``
-    .. note::
-        This transform acts out of place, i.e., it does not mutates the input tensor.
-    Args:
-        mean (sequence): Sequence of means for each channel.
-        std (sequence): Sequence of standard deviations for each channel.
-    """
-
-    def __init__(self, mean, std, inplace=False):
-        self.mean = mean
-        self.std = std
-        self.inplace = inplace
-
-    def __call__(self, sample):
-        """
-        Args:
-            tensor (Tensor): Tensor image of size (C, H, W) to be normalized.
-        Returns:
-            Tensor: Normalized Tensor image.
-        """
-        sample['image'] = TF.normalize(sample['image'], self.mean, self.std, self.inplace)
-        sample['tm'] = TF.normalize(sample['tm'], self.mean, self.std, self.inplace)
-
-        return sample
-
-    def __repr__(self):
-        return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
+    cv2.imshow('raw',raw)
+    cv2.imshow('thermal', ther)
+    cv2.imshow('bbs', bbs)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    #
+    # roi_pool = ROIPool((50, 50), 1)
+    # tm, bbb = tm.to(device),bbb.to(device)
+    # labels_output = roi_pool(tm,bbb)
+    # print(labels_output.shape)
 
 if __name__ == '__main__':
     THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
     ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
     IMGS_CSV = 'mydata/imgs_train.csv'
-    ROIS_CSV = 'mydata/rois_train_thr70.csv'
-    my_transform = ToTensor()
-    full_transform=transforms.Compose([RandomHorizontalFlip(p=5),
+    ROIS_CSV = 'mydata/rois_trainKaist_thr70_0.csv'
+    full_transform=transforms.Compose([RandomHorizontalFlip(),
                                        ToTensor(),])
                                   # Normalize(rgb_mean,rgb_std)])
 
     device = torch.device("cuda:0")
-    params = {'batch_size':2,
+    params = {'batch_size':1,
               'shuffle':True,
               'num_workers':24}
 
@@ -195,66 +139,32 @@ if __name__ == '__main__':
     dataiter = iter(dataloader)
     sample = dataiter.next()
     # sample = my_dataset[789]
+    NUM_BBS = my_dataset.NUM_BBS
 
- # Lặp qua bộ dữ liệu huấn luyện nhiều lần
-        # for i, data in enumerate(dataloader):
-        #     count = count + 1
-        #     print(count)
+    testDataset(sample)
 
-
-
-    # sample = my_dataset[37900]
-    #
-    # # data_frame = pd.read_csv('data/1256.csv')
-    # # img_id = data_frame.iloc[0,0]
-    #
-    # dataiter = iter(dataloader)
-    # sample = dataiter.next()
-    sam = sample['image']
-    bbb = sample['bb']
-    tm = sample['tm']
-
-
-    # raw = convertTensor2Img(sam,1)
-    # ther = convertTensor2Img(tm,0)
-    # bbs = visualizeRP(raw, bbb)
-
-    #
-    # cv2.imshow('raw',raw)
-    # cv2.imshow('thermal', ther)
-    # cv2.imshow('bbs', bbs)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-
-    # tm = sample['tm']
-    # print(sam.shape)
-    # print(bbb.shape)
-    # print(tm.shape)
-    bbb = bbb.view(-1,5)
-    idx = -1
-    for i,v in enumerate(bbb[:,0]):
-        if not i%NUM_BBS:
-            idx = idx + 1
-        bbb[i,0] = idx
+    # bbb = bbb.view(-1,5)
+    # idx = -1
+    # for i,v in enumerate(bbb[:,0]):
+    #     if not i%NUM_BBS:
+    #         idx = idx + 1
+    #     bbb[i,0] = idx
     # bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
 
     # ther = convertTensor2Img(tm,0)
-    labels_output = resizeThermal(tm, bbb)
-    print(labels_output.shape)
-    # for ind,labels in enumerate(labels_output):
-    #     print(labels.shape)
-    #     cv2.imshow('bbs{}'.format(ind), labels)
+    # labels_output = resizeThermal(tm, bbb)
+    # print(labels_output.shape)
+        # for ind,labels in enumerate(labels_output):
+        #     print(labels.shape)
+        #     cv2.imshow('bbs{}'.format(ind), labels)
     # for i,p in enumerate(labels_output):
     #     print(p.shape)
-        # cv2.imshow('bba{}'.format(i), p)
-    # # tmm = cv2.resize(labels_output, (50,50))
+    #     cv2.imshow('bba{}'.format(i), p)
+    # tmm = cv2.resize(labels_output, (50,50))
     # cv2.imshow('bbbb', tmm)
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
-    roi_pool = ROIPool((50, 50), 1)
-    tm, bbb = tm.to(device),bbb.to(device)
-    labels_output = roi_pool(tm,bbb)
-    print(labels_output.shape)
+
     # # exit()
     # bbb=bbb.view(-1, 5)
     # bbb[:, 0] = bbb[:, 0] - bbb[0, 0]

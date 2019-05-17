@@ -12,12 +12,15 @@ def equalizeHist(img):
     # clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(8, 8))
     # img = clahe.apply(img)
     # img = color.rgb2hsv(img)
-    img = exposure.equalize_adapthist(img,clip_limit=0.03)
-    img = restoration.denoise_tv_chambolle(img , weight=0.1)
+    gray = color.rgb2gray(img)
+    gray = exposure.equalize_adapthist(gray,clip_limit=0.03)
+    gray = restoration.denoise_tv_chambolle(gray , weight=0.1)
+
     # claheImg = cv2.equalizeHist(img)
     # img = cv2.fastNlMeansDenoising(img,None,4,7,21)
 
-    return img
+    return gray
+
 def visualizeRP(img,bbs, fm = 'ltrb',c = 255):
     '''
     Visualize region proposal
@@ -62,12 +65,14 @@ def convertRoisACF2CSV(path,new):
     with open(path,'r') as f:
         data = f.readlines()
 
-    for i in data:
+    for ind,i in enumerate(data):
         id,l,t,w,h,s = i.split(',')
         id = int(id) - 1
         r = round(float(l) + float(w),3)
         b = round(float(t) + float(h),3)
         with open(new,'a') as f:
+            l = max(float(l),0)
+            t = max(float(t),0)
             f.write('{},{},{},{},{}\n'.format(id,l,t,r,b))
 
     print('Done!')
@@ -99,14 +104,12 @@ def resizeThermal(img,rois):
 
     for roi in rois:
         id,y1,x1,y2,x2 = roi
-
-        x1 = max(x1,0)
-        y1 = max(y1,0)
-
         tm_cropped = img[id].transpose((1, 2, 0))
+        # print(tm_cropped.shape)
         tm_cropped = tm_cropped[x1:x2,y1:y2]
-        tm_cropped = cv2.resize(tm_cropped, (50,50)).transpose((2,0,1))
-        tm_croppeds.append(tm_cropped)
+        tm_cropped = cv2.resize(tm_cropped, (50,50))
+        # exit()
+        tm_croppeds.append(np.expand_dims(tm_cropped,axis=0))
     return torch.from_numpy(np.array(tm_croppeds)).type('torch.FloatTensor')
 
 def showBbs(img, bbs):
@@ -121,25 +124,17 @@ def showBbs(img, bbs):
 
     return img
 
-
-def main():
-    img = cv2.imread('I01793.jpg')
-    bbs_csv = 'mydata/rois_train_thr70.csv'
-    bbs = pd.read_csv(bbs_csv)
-    bbs.set_index('id', inplace=True)
-    bbs = bbs.loc[1793].as_matrix()
-    showBbs(img, bbs)
-
-def readLogFile(text):
+def readLogFile(path):
+    print(path)
     val = []
     st = 10
-    with open(text,'r') as f:
+    with open(path,'r') as f:
         data = f.readlines()
     iters = list(range(10, (len(data)+1)*10,10))
+
     for d in data:
         val.append(float(d.split()[3]))
     return iters, val
-
 
 def visualizeErrorLoss(true_txt, false_txt=None):
     if false_txt:
@@ -147,31 +142,22 @@ def visualizeErrorLoss(true_txt, false_txt=None):
         plt.plot(f_iter, f_val, color='g')
     t_iter, t_val = readLogFile(true_txt)
 
-    plt.plot(t_iter, t_val, color='orange')
+    plt.plot(t_iter[500:], t_val[500:], color='orange')
     plt.xlabel('iter')
     plt.ylabel('L2 loss');
     plt.title('error loss')
     plt.show()
 
+def main():
+    # img = cv2.imread('I01793.jpg')
+    bbs_txt = '../ngoc/toolbox/detector/models/Dets_TestK_All_with_Kaist_Thr70.txt'
+    bbs_csv = 'mydata/rois_testKaist_thr70_0.csv'
+
+    convertRoisACF2CSV(bbs_txt, bbs_csv)
 if __name__ == '__main__':
+    # createImgsFilesName('/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test', 'mydata/imgs_test.txt')
     # main()
-    true_txt = './models/model8/log8.txt'
-    # false_txt = './models/model7/log7.txt'
-    visualizeErrorLoss(true_txt=true_txt)
-    # path = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm'
-    # # img = io.imread(os.path.join(path,'set05_V000_lwir_I02899.jpg'))
-    #
-    # img = io.imread(os.path.join(path,'set03_V000_lwir_I01000.jpg'))
-    # # img = img[:,:,::-1]
-    # # img = color.rgb2gray(img)
-    # # img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    # # print(img.shape)
-    # # img = img_as_ubyte(img)
-    # # img = img[:,:,::-1]
-    # img = equalizeHist(img)
-    # io.imshow(img)
-    #
-    # plt.show()
-    # cv2.imshow('aa',img)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    # print('./models/model14/log14.txt')
+    # true_txt = './models/model15/log15.txt'
+    test_txt = './test2_model21_epoch7.txt'
+    visualizeErrorLoss(test_txt)
