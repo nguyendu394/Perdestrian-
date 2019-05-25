@@ -9,10 +9,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from model.roi_layers import ROIPool
+from skimage import io
 
 import vgg, cv2, time
-from mydataset import MyDataset
-from image_processing import resizeThermal
+from mydataset import MyDataset, testResizeThermal
+from image_processing import resizeThermal,visualizeRP,convertTensor2Img
 # from image_processing import showTensor
 
 rgb_mean = (0.4914, 0.4822, 0.4465)
@@ -42,13 +43,13 @@ def train():
     THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
     ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
     IMGS_CSV = 'mydata/imgs_train.csv'
-    ROIS_CSV = 'mydata/rois_trainKaist_thr70_0.csv'
+    ROIS_CSV = 'mydata/rois_trainKaist_thr70_1.csv'
 
     params = {'batch_size': 6,
           'shuffle': True,
           'num_workers': 24}
     max_epoch = 30
-    LR = 1e-9 #learning rate
+    LR = 1e-6 #learning rate
     MT = 0.9 #momentum
 
     device = torch.device("cuda:0")
@@ -66,8 +67,8 @@ def train():
     RRN_net = MyRRN()
     RRN_net.to(device)
     NUM_BBS = my_dataset.NUM_BBS
-    print(NUM_BBS)
-    RRN_net.load_state_dict(torch.load('models/model19/model19_lr_1e-7_bz_6_NBS_128_data_True_epoch_29.ptx'))
+    print('NUM_BBS',NUM_BBS)
+    RRN_net.load_state_dict(torch.load('models/model21/model21_lr_1e-7_bz_6_NBS_128_data_True_epoch_7.ptx'))
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,RRN_net.parameters()), lr=LR, momentum=MT)
 
@@ -117,11 +118,11 @@ def train():
             if i % 10 == 9:    # In mỗi 2000 mini-batches.
                 text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
                 print(text)
-                with open('models/model21/log21.txt','a') as f:
+                with open('models/model22/log22.txt','a') as f:
                     f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(RRN_net.state_dict(), 'models/model21/model21_lr_1e-7_bz_6_NBS_128_data_True_epoch_{}.ptx'.format(epoch))
+        torch.save(RRN_net.state_dict(), 'models/model22/model22_lr_1e-6_bz_6_NBS_128_data_True_epoch_{}.ptx'.format(epoch))
     print('Huấn luyện xong')
 
 
@@ -155,9 +156,8 @@ def test():
     total_loss = []
     criterion = nn.MSELoss()
 
-    for i, data in enumerate(dataloader):
+    for i, sample in enumerate(dataloader):
         # Lấy dữ liệu
-        sample = data
         sam = sample['image']
         bbb = sample['bb']
         bbb=bbb.view(-1, 5)
@@ -199,8 +199,87 @@ def test():
             running_loss = 0.0
             st = time.time()
     print("TOTAL: ", sum(total_loss)/len(total_loss))
+
+def testRRN_Pretrain(sample,pre):
+    RRN_net = MyRRN()
+    RRN_net.to(device)
+    RRN_net.load_state_dict(torch.load(pre))
+    NUM_BBS = my_dataset.NUM_BBS
+
+    sam = sample['image']
+    bbb = sample['bb']
+    tm = sample['tm']
+    gt = sample['gt']
+    bbb=bbb.view(-1, 5)
+    idx = -1
+    for j,v in enumerate(bbb[:,0]):
+        if not j%NUM_BBS:
+            idx = idx + 1
+        bbb[j,0] = idx
+
+    labels_output = resizeThermal(tm, bbb)
+    # labels_output = labels_output.to(device)
+
+    # print(labels_output.size())
+    # labels_output = labels_output.type('torch.ByteTensor')
+    out = labels_output.cpu()
+    out = out.detach().numpy()
+    ther = convertTensor2Img(tm,0)
+    imgg = visualizeRP(ther, bbb)
+
+    cv2.imshow('aa',imgg)
+    # plt.imshow(imgg)
+    # plt.show()
+    # sam,bbb,tm = sam.to(device), bbb.to(device), tm.to(device)
+
+    # out_RRN = RRN_net(sam,bbb)
+    # out_RRN = out_RRN.cpu().detach().numpy()
+
+    # criterion = nn.MSELoss()
+    # loss = criterion(out_RRN,labels_output)
+    # print(loss)
+
+    # print(out_RRN.size())
+    # print(abs(out_RRN-labels_output).sum()/(50*50))
+
+    for ind,labels in enumerate(out_RRN):
+        # print('output')
+        # print(labels)
+        print(np.min(labels))
+        print(labels.transpose((1, 2, 0))[0])
+        cv2.imshow('rrn{}'.format(ind), labels.transpose((1, 2, 0)))
+        # plt.show()
+        # plt.imshow(labels.transpose((1, 2, 0)))
+
+    for ind,labels in enumerate(out):
+        cv2.imshow('bbs{}'.format(ind), labels.transpose((1, 2, 0)))
+        # plt.show()
+
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 if __name__ == '__main__':
-    test()
-    # model = MyRRN()
-# paras = list(net.parameters())
-# print(paras[0])
+    train()
+
+    # THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
+    # ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
+    # IMGS_CSV = 'mydata/imgs_train.csv'
+    # ROIS_CSV = 'mydata/rois_trainKaist_thr70_0.csv'
+    # full_transform=transforms.Compose([RandomHorizontalFlip(p=5),
+    #                                    ToTensor(),])
+    #                               # Normalize(rgb_mean,rgb_std)])
+    #
+    # device = torch.device("cuda:0")
+    # params = {'batch_size':1,
+    #           'shuffle':True,
+    #           'num_workers':24}
+    #
+    #
+    # my_dataset = MyDataset(imgs_csv=IMGS_CSV,rois_csv=ROIS_CSV,
+    # root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = full_transform)
+    # print(my_dataset.__len__())
+    # dataloader = DataLoader(my_dataset, **params)
+    # dataiter = iter(dataloader)
+    # sample = dataiter.next()
+    # # sample = my_dataset[789]
+    # NUM_BBS = my_dataset.NUM_BBS
+    # testRRN_Pretrain(sample, 'models/model21/model21_lr_1e-7_bz_6_NBS_128_data_True_epoch_7.ptx')

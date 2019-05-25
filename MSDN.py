@@ -88,7 +88,7 @@ def train():
     params = {'batch_size': 4,
           'shuffle': True,
           'num_workers': 24}
-
+    print(params)
     max_epoch = 10
     LR = 1e-9 #learning rate
     MT = 0.9 #momentum
@@ -152,10 +152,13 @@ def train():
             # out_MSDN = raw_vgg16(sam)
             print(out_MSDN[0].shape)
             print(out_MSDN[1].shape)
+
             exit()
             # loss = criterion(out_RRN, labels_output)
             # print('loss at {}: '.format(i),loss.item())
             # loss.backward()
             # optimizer.step()
 if __name__ == '__main__':
-    train()
+    # train()
+    out_MSDN = np.load('out_MSDN.npy')
+    print(out_MSDN)

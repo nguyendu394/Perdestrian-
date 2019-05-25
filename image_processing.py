@@ -7,30 +7,28 @@ from skimage import io, color, exposure,restoration
 from PIL import Image
 import torch
 
-def equalizeHist(img):
-    # img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    # clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(8, 8))
-    # img = clahe.apply(img)
+def equalizeHist(gray):
+    # gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(8, 8))
+    gray = clahe.apply(gray)
     # img = color.rgb2hsv(img)
-    gray = color.rgb2gray(img)
-    gray = exposure.equalize_adapthist(gray,clip_limit=0.03)
-    gray = restoration.denoise_tv_chambolle(gray , weight=0.1)
-
+    # gray = color.rgb2gray(img)
+    # gray = exposure.equalize_adapthist(gray,clip_limit=0.03)
+    # gray = restoration.denoise_tv_chambolle(gray , weight=0.1)
     # claheImg = cv2.equalizeHist(img)
-    # img = cv2.fastNlMeansDenoising(img,None,4,7,21)
+    gray = cv2.fastNlMeansDenoising(gray,None,4,7,21)
 
     return gray
 
-def visualizeRP(img,bbs, fm = 'ltrb',c = 255):
+def visualizeRP(img,bbs, gt = None, fm = 'ltrb',c = 255):
     '''
     Visualize region proposal
     input: img (numpy) WxHxC
-           bbs (tensor) ltwh/ltrb bzxnx5
+           bbs (numpy) id,l,t,w,h/id,l,t,r,b: nx5
+           gt (numpy) l,t,w,h,cls/l,t,r,b,cls: nx5
     '''
-    bbs = bbs.type('torch.IntTensor')
-    bbs = bbs.cpu()
-    bbs = bbs.view(-1,5)
-    bbs = bbs.detach().numpy()
+
+    bbs = bbs.astype(np.int32)
 
     for d in bbs:
         id,l,t,r,b = d
@@ -41,6 +39,18 @@ def visualizeRP(img,bbs, fm = 'ltrb',c = 255):
         elif fm == 'ltwh':
             img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,0),1)
             # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
+    if gt:
+        gt = gt.astype(np.int32)
+        if np.prod(gt.shape):
+            for d in gt:
+                l,t,r,b, cls = d
+                # print(l,t,r,b)
+                if fm == 'ltrb':
+                    img = cv2.rectangle(img,(l,t),(r,b),(255,c,0),1)
+
+                elif fm == 'ltwh':
+                    img = cv2.rectangle(img,(l,t),(r+l,b+t),(255,c,0),1)
+                    # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
     return img
 
 def createImgsFilesName(path,name_file):
@@ -73,18 +83,19 @@ def convertRoisACF2CSV(path,new):
         with open(new,'a') as f:
             l = max(float(l),0)
             t = max(float(t),0)
+            r = max(float(r),0)
+            b = max(float(b),0)
             f.write('{},{},{},{},{}\n'.format(id,l,t,r,b))
 
     print('Done!')
 
-def convertTensor2Img(out,k):
+def convertTensor2Img(out):
     '''
     Visualize a Tensors
     input: a Tensors on cpu (1x1xhxw)
     output: a image(numpy)
     '''
-    if k:
-        out = out.type('torch.ByteTensor')
+    out = out.type('torch.ByteTensor')
     out = out.cpu()
     out = out.detach().numpy()
     # print(type(out[0][0][0][0]))
@@ -104,9 +115,14 @@ def resizeThermal(img,rois):
 
     for roi in rois:
         id,y1,x1,y2,x2 = roi
+        # print(roi)
         tm_cropped = img[id].transpose((1, 2, 0))
         # print(tm_cropped.shape)
+        x1 = max(x1,0)
+        y1 = max(y1,0)
         tm_cropped = tm_cropped[x1:x2,y1:y2]
+        # print(tm_cropped.shape)
+        # exit()
         tm_cropped = cv2.resize(tm_cropped, (50,50))
         # exit()
         tm_croppeds.append(np.expand_dims(tm_cropped,axis=0))
@@ -150,14 +166,34 @@ def visualizeErrorLoss(true_txt, false_txt=None):
 
 def main():
     # img = cv2.imread('I01793.jpg')
-    bbs_txt = '../ngoc/toolbox/detector/models/Dets_TestK_All_with_Kaist_Thr70.txt'
-    bbs_csv = 'mydata/rois_testKaist_thr70_0.csv'
+    bbs_txt = '../ngoc/toolbox/detector/models/Dets_TrainKaist_Thr70.txt'
+    bbs_csv = 'mydata/rois_trainKaist_thr70_1.csv'
 
     convertRoisACF2CSV(bbs_txt, bbs_csv)
+
+def flipBoundingBox(img,bboxes,gts):
+    img_center = np.array(img.shape[:2])[::-1]/2
+    img_center = np.hstack((img_center, img_center))
+
+
+    img =  img[:,::-1,:]
+
+    bboxes[:,[1,3]] += 2*(img_center[[0,2]] - bboxes[:,[1,3]])
+    box_w = abs(bboxes[:,1] - bboxes[:,3])
+    bboxes[:,1] -= box_w
+    bboxes[:,3] += box_w
+    if np.prod(gts.shape):
+        gts[:,[0,2]] += 2*(img_center[[0,2]] - gts[:,[0,2]])
+        box_w_gt = abs(gts[:,0] - gts[:,2])
+        gts[:,0] -= box_w_gt
+        gts[:,2] += box_w_gt
+
+    return img,bboxes,gts
+
 if __name__ == '__main__':
     # createImgsFilesName('/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test', 'mydata/imgs_test.txt')
-    # main()
+    main()
     # print('./models/model14/log14.txt')
     # true_txt = './models/model15/log15.txt'
-    test_txt = './test2_model21_epoch7.txt'
-    visualizeErrorLoss(test_txt)
+    # test_txt = './test2_model21_epoch7.txt'
+    # visualizeErrorLoss(test_txt)

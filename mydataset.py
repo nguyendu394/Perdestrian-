@@ -12,8 +12,8 @@ from torchvision import transforms
 # import matplotlib.patches as patches
 # from PIL import Image
 # import random
-# from model.roi_layers import ROIPool
-from image_processing import convertTensor2Img, showBbs,visualizeRP, resizeThermal
+from model.roi_layers import ROIPool
+from image_processing import convertTensor2Img, showBbs,visualizeRP, resizeThermal, flipBoundingBox
 import torch.nn as nn
 # Ignore warnings
 import warnings
@@ -36,6 +36,7 @@ class MyDataset(Dataset):
         self.ther_path = ther_path
         self.gt = None
         self.NUM_BBS = 128
+        self.MAX_GTS = 9
 
     def __len__(self):
         return len(self.imgs)
@@ -46,13 +47,33 @@ class MyDataset(Dataset):
         gt_name = img_name.replace('images_train', 'annotations_train')
         gt_name = gt_name.replace('jpg', 'txt')
 
-        image = io.imread(img_name)
+        image = cv2.imread(img_name)
 
         bbs = self.bb.loc[idx].iloc[:self.NUM_BBS].reset_index().as_matrix()
         bbs = bbs.astype('float')
 
-        tm = io.imread(os.path.join(self.ther_path,self.imgs.iloc[idx,0].replace('visible','lwir')))
-        sample = {'image': image, 'bb': bbs, 'tm':tm, 'gt':gt_name}
+        tm = cv2.imread(os.path.join(self.ther_path,self.imgs.iloc[idx,0].replace('visible','lwir')),0)
+
+        gt_boxes = []
+
+        with open(gt_name,'r') as f:
+            data = f.readlines()
+
+        for i in range(1,len(data)):
+            d = data[i].split()
+            #x1,x2,y1,y2,cls
+            temp = [int(d[1]),int(d[2]),int(d[1])+int(d[3]),int(d[2])+int(d[4]),1]
+            gt_boxes.append(temp)
+
+        gt_boxes_padding = np.zeros((self.MAX_GTS, 5),dtype=np.float)
+        if gt_boxes:
+            num_gts = len(gt_boxes)
+            gt_boxes = np.asarray(gt_boxes,dtype=np.float)
+
+            # gt_boxes_padding = torch.FloatTensor(self.MAX_GTS, 5).zero_()
+            gt_boxes_padding[:num_gts,:] = gt_boxes[:num_gts]
+
+        sample = {'img_info':img_name, 'image': image, 'bb': bbs, 'tm':tm, 'gt':gt_boxes_padding}
 
         if self.transform:
             sample = self.transform(sample)
@@ -65,7 +86,16 @@ def testResizeThermal(sample,NUM_BBS):
     bbb = sample['bb']
     tm = sample['tm']
     gt = sample['gt']
-    bbb=bbb.view(-1, 5)
+
+    bbb = bbb.cpu()
+    bbb = bbb.view(-1,5)
+
+
+    gt = gt.cpu()
+    gt = gt.view(-1,5)
+    gt = gt.detach().numpy()
+
+
     idx = -1
     for j,v in enumerate(bbb[:,0]):
         if not j%NUM_BBS:
@@ -73,59 +103,75 @@ def testResizeThermal(sample,NUM_BBS):
         bbb[j,0] = idx
 
     labels_output = resizeThermal(tm, bbb)
-    # print(labels_output.size())
-    # labels_output = labels_output.type('torch.ByteTensor')
+    print(labels_output.size())
+    labels_output = labels_output.type('torch.ByteTensor')
     out = labels_output.cpu()
     out = out.detach().numpy()
-    ther = convertTensor2Img(tm,0)
+    ther = convertTensor2Img(tm)
+    bbb = bbb.detach().numpy()
     imgg = visualizeRP(ther, bbb)
+
 
     cv2.imshow('winname', imgg)
     for ind,labels in enumerate(out):
+        # print(type(labels.transpose((1, 2, 0))[0][0][0]))
         cv2.imshow('bbs{}'.format(ind), labels.transpose((1, 2, 0)))
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 def testDataset(sample):
+    print(sample['img_info'])
     sam = sample['image']
-    bbb = sample['bb']
+    bbs = sample['bb']
     tm = sample['tm']
     gt = sample['gt']
-    print(bbb.size())
+    # print(bbs.size())
+    # print(gt.size())
+    # print(gt)
 
-    # print(sam.shape)
-    # print(bbb.shape)
-    # print(tm.shape)
-    # print(len(gt))
+    bbs = bbs.cpu()
+    bbs = bbs.view(-1,5)
+    bbs = bbs.detach().numpy()
 
+    gt = gt.cpu()
+    gt = gt.view(-1,5)
+    gt = gt.detach().numpy()
+    print(gt)
 
     # for ind,labels in enumerate(labels_output):
     #     print(labels.shape)
     #     cv2.imshow('bbs{}'.format(ind), labels)
-    raw = convertTensor2Img(sam,1)
-    ther = convertTensor2Img(tm,0)
-    bbs = visualizeRP(raw, bbb)
+    raw = convertTensor2Img(sam)
+    ther = convertTensor2Img(tm)
+    draw_bbs = visualizeRP(raw, bbs,gt)
+
+    # img,bboxes = flipBoundingBox(raw, bbs)
+    # draw_flip_bbs = visualizeRP(img, bboxes,gt)
 
     cv2.imshow('raw',raw)
     cv2.imshow('thermal', ther)
-    cv2.imshow('bbs', bbs)
+    cv2.imshow('bbs', draw_bbs)
+    # cv2.imshow('flip_bbs', draw_flip_bbs)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+    # io.imshow(sam)
+    # plt.show()
     #
     # roi_pool = ROIPool((50, 50), 1)
     # tm, bbb = tm.to(device),bbb.to(device)
     # labels_output = roi_pool(tm,bbb)
     # print(labels_output.shape)
 
+
+
 if __name__ == '__main__':
     THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
     ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
     IMGS_CSV = 'mydata/imgs_train.csv'
-    ROIS_CSV = 'mydata/rois_trainKaist_thr70_0.csv'
+    ROIS_CSV = 'mydata/rois_trainKaist_thr70_1.csv'
     full_transform=transforms.Compose([RandomHorizontalFlip(),
                                        ToTensor(),])
                                   # Normalize(rgb_mean,rgb_std)])
-
     device = torch.device("cuda:0")
     params = {'batch_size':1,
               'shuffle':True,
@@ -141,14 +187,36 @@ if __name__ == '__main__':
     # sample = my_dataset[789]
     NUM_BBS = my_dataset.NUM_BBS
 
-    testDataset(sample)
 
+    testResizeThermal(sample, NUM_BBS)
+    # img = sample['image']
+    # bbb = sample['bb']
     # bbb = bbb.view(-1,5)
     # idx = -1
     # for i,v in enumerate(bbb[:,0]):
     #     if not i%NUM_BBS:
     #         idx = idx + 1
     #     bbb[i,0] = idx
+    #
+    # img,bbb = img.to(device), bbb.to(device)
+    #
+    # roi_pool = ROIPool((50, 50), 1)
+    # x = roi_pool(img, bbb)
+    # print(x.shape)
+    #
+    # bbb = bbb.cpu().detach().numpy()
+    # img = convertTensor2Img(img)
+    # img = visualizeRP(img, bbb)
+    # cv2.imshow('AAA', img)
+    #
+    # x = x.type('torch.ByteTensor')
+    # x = x.cpu().detach().numpy()
+    # for ind,labels in enumerate(x):
+    #     print(labels.shape)
+    #     cv2.imshow('bbs{}'.format(ind), labels.transpose((1, 2, 0)))
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
     # bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
 
     # ther = convertTensor2Img(tm,0)

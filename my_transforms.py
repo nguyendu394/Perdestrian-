@@ -1,10 +1,9 @@
 import torchvision.transforms.functional as TF
 import numpy as np
 import random
-from image_processing import equalizeHist
+from image_processing import equalizeHist,flipBoundingBox
 import torch
 
-NUM_BBS = 128
 class ToPILImage(object):
     """Convert a tensor or an ndarray to PIL Image.
     Converts a torch.*Tensor of shape C x H x W or a numpy ndarray of shape
@@ -44,7 +43,7 @@ class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
     def __call__(self, sample):
-        image, bbs, tm, gt= sample['image'], sample['bb'], sample['tm'], sample['gt']
+        info, image, bbs, tm, gt= sample['img_info'], sample['image'], sample['bb'], sample['tm'], sample['gt']
 
         # swap color axis because
         # numpy image: H x W x C
@@ -56,15 +55,16 @@ class ToTensor(object):
         image = np.array(image)
         image = image.transpose((2, 0, 1))
 
-        tm = np.array(tm,dtype='uint8')
         tm = equalizeHist(tm)
         tm = np.expand_dims(tm,axis=0)
         # tm = tm.transpose((2, 0, 1))
 
-        return {'image': torch.from_numpy(image).type('torch.FloatTensor'),
+        return {'img_info': info,
+                'image': torch.from_numpy(image).type('torch.FloatTensor'),
                 'bb': torch.from_numpy(bbs).type('torch.FloatTensor'),
                 'tm': torch.from_numpy(tm).type('torch.FloatTensor'),
-                'gt':gt}
+                'gt': torch.from_numpy(gt).type('torch.FloatTensor'),
+                }
 
 class RandomHorizontalFlip(object):
     """Horizontally flip the given PIL Image randomly with a given probability.
@@ -82,11 +82,15 @@ class RandomHorizontalFlip(object):
         Returns:
             PIL Image: Randomly flipped image.
         """
-        img = TF.to_pil_image(sample['image'], 'RGB')
-        ther = TF.to_pil_image(sample['tm'], 'RGB')
+        # img = TF.to_pil_image(sample['image'], 'RGB')
+        # ther = TF.to_pil_image(sample['tm'], 'RGB')
+        # if random.random() < self.p:
+        #     sample['image'] = TF.hflip(img)
+        #     sample['tm'] = TF.hflip(ther)
         if random.random() < self.p:
-            sample['image'] = TF.hflip(img)
-            sample['tm'] = TF.hflip(ther)
+            sample['image'], sample['bb'],  sample['gt'] = flipBoundingBox(sample['image'],sample['bb'], sample['gt'])
+            sample['tm'] = sample['tm'][:,::-1]
+
         return sample
 
     def __repr__(self):

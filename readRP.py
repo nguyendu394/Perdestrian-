@@ -178,15 +178,9 @@ def bbox_overlaps(anchors, gt_boxes):
     return overlaps
 
 if __name__ == '__main__':
-    # main()
-    anchors = torch.randn(15,4)
-    gt_boxes = torch.randn(3,3,4)
-    x = torch.randn(2,3,4)
-    ans = bbox_overlaps_batch(anchors, gt_boxes)
-    # print(anchors)
-    # anchors = anchors.view(1, N, 4).expand(batch_size, N, 4).contiguous()
-    # max_overlaps, gt_assignment = torch.max(x, 2)
-    print(ans.shape)
-    # print(max_overlaps)
-    # print(gt_assignment)
-    # print(max_overlaps.shape)
+    bb = np.random.randn(4, 5)
+    gt = np.zeros((9, 5),dtype=np.float)
+    print(gt)
+    print(bb)
+    gt[:4,:] = bb[:4]
+    print(gt)
