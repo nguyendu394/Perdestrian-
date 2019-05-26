@@ -39,18 +39,17 @@ def visualizeRP(img,bbs, gt = None, fm = 'ltrb',c = 255):
         elif fm == 'ltwh':
             img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,0),1)
             # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
-    if gt:
+    if np.prod(gt.shape):
         gt = gt.astype(np.int32)
-        if np.prod(gt.shape):
-            for d in gt:
-                l,t,r,b, cls = d
-                # print(l,t,r,b)
-                if fm == 'ltrb':
-                    img = cv2.rectangle(img,(l,t),(r,b),(255,c,0),1)
+        for d in gt:
+            l,t,r,b, cls = d
+            # print(l,t,r,b)
+            if fm == 'ltrb':
+                img = cv2.rectangle(img,(l,t),(r,b),(255,c,0),1)
 
-                elif fm == 'ltwh':
-                    img = cv2.rectangle(img,(l,t),(r+l,b+t),(255,c,0),1)
-                    # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
+            elif fm == 'ltwh':
+                img = cv2.rectangle(img,(l,t),(r+l,b+t),(255,c,0),1)
+                # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
     return img
 
 def createImgsFilesName(path,name_file):

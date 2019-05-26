@@ -127,3 +127,25 @@ class Normalize(object):
 
     def __repr__(self):
         return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
+
+class my_normalize(object):
+    """
+    Normalize object from [0,255] to [0,1]
+    """
+
+    def __init__(self):
+        pass
+    def __call__(self, sample):
+        """
+        Args:
+            tensor (Tensor): Tensor image of size (C, H, W) to be normalized.
+        Returns:
+            Tensor: Normalized Tensor image.
+        """
+        sample['image'] = sample['image']/255
+        sample['tm'] = sample['tm']/255
+
+        return sample
+
+    def __repr__(self):
+        return self.__class__.__name__ + '[0,1]'

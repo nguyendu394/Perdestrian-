@@ -81,7 +81,7 @@ class MyDataset(Dataset):
         return sample
 
 
-def testResizeThermal(sample,NUM_BBS):
+def testResizeThermal(sample,NUM_BBS,bz):
     sam = sample['image']
     bbb = sample['bb']
     tm = sample['tm']
@@ -96,11 +96,9 @@ def testResizeThermal(sample,NUM_BBS):
     gt = gt.detach().numpy()
 
 
-    idx = -1
-    for j,v in enumerate(bbb[:,0]):
-        if not j%NUM_BBS:
-            idx = idx + 1
-        bbb[j,0] = idx
+    ind = torch.arange(bz).view(-1,1)
+    ind = ind.repeat(1,NUM_BBS).view(-1,1)
+    bbb[:,0] = ind[:,0]
 
     labels_output = resizeThermal(tm, bbb)
     print(labels_output.size())
@@ -119,11 +117,14 @@ def testResizeThermal(sample,NUM_BBS):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def testDataset(sample):
+def testDataset(sample,norm = False):
     print(sample['img_info'])
-    sam = sample['image']
+    k = 1
+    if norm:
+        k = 255
+    sam = sample['image']*k
+    tm = sample['tm']*k
     bbs = sample['bb']
-    tm = sample['tm']
     gt = sample['gt']
     # print(bbs.size())
     # print(gt.size())
@@ -170,7 +171,8 @@ if __name__ == '__main__':
     IMGS_CSV = 'mydata/imgs_train.csv'
     ROIS_CSV = 'mydata/rois_trainKaist_thr70_1.csv'
     full_transform=transforms.Compose([RandomHorizontalFlip(),
-                                       ToTensor(),])
+                                       ToTensor(),
+                                       my_normalize()])
                                   # Normalize(rgb_mean,rgb_std)])
     device = torch.device("cuda:0")
     params = {'batch_size':1,
@@ -186,9 +188,13 @@ if __name__ == '__main__':
     sample = dataiter.next()
     # sample = my_dataset[789]
     NUM_BBS = my_dataset.NUM_BBS
+    print('NUM_BBS',NUM_BBS)
 
+    print(sample['image'])
+    print('===================')
+    print(sample['tm'])
 
-    testResizeThermal(sample, NUM_BBS)
+    # testDataset(sample,True)
     # img = sample['image']
     # bbb = sample['bb']
     # bbb = bbb.view(-1,5)
