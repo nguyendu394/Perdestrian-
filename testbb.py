@@ -1,6 +1,8 @@
 import numpy as np
 import cv2
 from image_processing import showBbs
+# from sklearn import preprocessing
+import torch
 
 ID = 'I01445'
 GT_PATH = './mydata/{}.txt'.format(ID)
@@ -90,4 +92,18 @@ def main():
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    main()
+    # main()
+    a = torch.randn(3,5)
+    b = torch.arange(0,15)
+    print(a)
+    print(b)
+
+    a.copy_(b)
+    print(a)
+    # print(np.count_nonzero((a-b)==0))
+
+    # print(np.where(a==0,a-1,a))
+
+
+
+    # print(preprocessing.normalize(a*np.log(900/b),norm='l2'))

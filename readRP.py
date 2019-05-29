@@ -10,12 +10,12 @@ def main():
     ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
     IMGS_CSV = 'mydata/imgs_test.csv'
     ROIS_CSV = 'mydata/rois_test_thr70.csv'
-    ROIS_KAIST_CSV = 'mydata/rois_trainKaist_thr70_0.csv'
+    ROIS_KAIST_CSV = 'mydata/rois_trainKaist_thr70_1.csv'
 
     imgs = pd.read_csv(IMGS_CSV)
     bbs = pd.read_csv(ROIS_KAIST_CSV)
     bbs.set_index('id', inplace=True)
-    print(bbs)
+    # print(bbs)
     # for idx in range(45139):
     #     print('IDX: ', idx)
     #     bb = bbs.loc[idx].iloc[:15].reset_index().as_matrix()
@@ -32,9 +32,9 @@ def main():
     #
     min = 99999999
     idx = -1
-    for i in range(45139):
+    for i in range(50184):
         aa = bbs.loc[i].reset_index().values
-        if aa.shape[0] < min:
+        if aa.shape[0] < min and aa.shape[0] > 138:
             min = aa.shape[0]
             idx = i
     print(min,idx)
@@ -177,10 +177,13 @@ def bbox_overlaps(anchors, gt_boxes):
 
     return overlaps
 
+
+def test(aa,bb,cc):
+    print(aa)
+    return aa + bb + cc
 if __name__ == '__main__':
-    bb = np.random.randn(4, 5)
-    gt = np.zeros((9, 5),dtype=np.float)
-    print(gt)
-    print(bb)
-    gt[:4,:] = bb[:4]
-    print(gt)
+    # main()
+    a = torch.randn(5,3)
+    print(type(a))
+    b = a.data
+    print(type(b))

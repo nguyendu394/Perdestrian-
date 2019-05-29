@@ -7,11 +7,12 @@ import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from model.roi_layers import ROIPool
+# from model.roi_layers import ROIPool
+import torchvision.ops.roi_pool as ROIPool
 from RRN import MyRRN
 import vgg, cv2, time
-from mydataset import MyDataset, ToTensor, RandomHorizontalFlip, Normalize, resizeThermal
-# from image_processing import showTensor
+from mydataset import MyDataset
+
 
 rgb_mean = (0.4914, 0.4822, 0.4465)
 rgb_std = (0.2023, 0.1994, 0.2010)
@@ -31,8 +32,8 @@ class MyMSDN(nn.Module):
         self.last_subnetA = raw_vgg16.features[-7:]
         self.front_subnetB = raw_RRN.features[:-7]
         self.last_subnetB = raw_RRN.features[-7:]
-        self.front_roi_pool = ROIPool((7, 7), 1/8)
-        self.last_roi_pool = ROIPool((7, 7), 1/16)
+        # self.front_roi_pool = ROIPool((7, 7), 1/8)
+        # self.last_roi_pool = ROIPool((7, 7), 1/16)
         self.conv1 = nn.Conv2d(in_channels=2048, out_channels=1024, kernel_size=1)
         # self.fc1 = nn.Linear(1024*7*7, 4096)
         # self.avgpool = raw_vgg16.avgpool
@@ -60,10 +61,14 @@ class MyMSDN(nn.Module):
         b1 = self.front_subnetB(x)
         b2 = self.last_subnetB(b1)
 
-        x1 = self.front_roi_pool(a1,rois)
-        x2 = self.last_roi_pool(a2,rois)
-        x3 = self.front_roi_pool(b1,rois)
-        x4 = self.last_roi_pool(b2,rois)
+        #front_roi_pool
+        x1 = ROIPool(a1,rois,(7, 7), 1/8)
+        #last_roi_pool
+        x2 = ROIPool(a2,rois,(7, 7), 1/16)
+        #front_roi_pool
+        x3 = ROIPool(b1,rois,(7, 7), 1/8)
+        #last_roi_pool
+        x4 = ROIPool(b2,rois,(7, 7), 1/16)
 
         x = torch.cat((x1,x2,x3,x4),1)
         x = self.conv1(x)
@@ -125,11 +130,10 @@ def train():
             sam = sample['image']
             bbb = sample['bb']
             bbb=bbb.view(-1, 5)
-            idx = -1
-            for j,v in enumerate(bbb[:,0]):
-                if not j%NUM_BBS:
-                    idx = idx + 1
-                bbb[j,0] = idx
+
+            ind = torch.arange(params['batch_size'],requires_grad=False).view(-1,1)
+            ind = ind.repeat(1,NUM_BBS).view(-1,1)
+            bbb[:,0] = ind[:,0]
 
             tm = sample['tm']
             # print(bbb.shape)
@@ -150,9 +154,9 @@ def train():
             print(sam.shape)
             out_MSDN = MSDN_net(sam,bbb)
             # out_MSDN = raw_vgg16(sam)
-            print(out_MSDN[0].shape)
+            print(len(out_MSDN))
             print(out_MSDN[1].shape)
-
+            torch.save((out_MSDN[0].cpu(),out_MSDN[1].cpu()),'out_RRN.pth')
             exit()
             # loss = criterion(out_RRN, labels_output)
             # print('loss at {}: '.format(i),loss.item())
@@ -160,5 +164,6 @@ def train():
             # optimizer.step()
 if __name__ == '__main__':
     # train()
-    out_MSDN = np.load('out_MSDN.npy')
-    print(out_MSDN)
+    cls, pros = torch.load('out_MSDN.pth')
+    print(cls.size())
+    print(pros.size())

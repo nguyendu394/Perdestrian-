@@ -2,27 +2,29 @@ from __future__ import print_function, division
 import os, sys, cv2
 import torch
 import pandas as pd
-from skimage import io
+# from skimage import io
 import numpy as np
-import matplotlib.pyplot as plt
+
 from torch.utils.data import Dataset, DataLoader
-from my_transforms import *
+# from my_transforms import *
 from torchvision import transforms
+
 # import torchvision.transforms.functional as TF
 # import matplotlib.patches as patches
 # from PIL import Image
 # import random
-from model.roi_layers import ROIPool
-from image_processing import convertTensor2Img, showBbs,visualizeRP, resizeThermal, flipBoundingBox
-import torch.nn as nn
+# from model.roi_layers import ROIPool
+
+# from image_processing import convertTensor2Img, showBbs,visualizeRP, resizeThermal, flipBoundingBox
+# import torch.nn as nn
 # Ignore warnings
 import warnings
 warnings.filterwarnings("ignore")
 
-plt.ion()   # interactive mode
 
 rgb_mean = (0.4914, 0.4822, 0.4465)
 rgb_std = (0.2023, 0.1994, 0.2010)
+ # mean=(0,485, 0,456, 0,406) and std=(0,229, 0,224, 0,225)
 
 class MyDataset(Dataset):
     """docstring for MyDataset."""
@@ -35,8 +37,9 @@ class MyDataset(Dataset):
         self.transform = transform
         self.ther_path = ther_path
         self.gt = None
-        self.NUM_BBS = 128
+        self.NUM_BBS = 4
         self.MAX_GTS = 9
+        print('NUM_BBS:',self.NUM_BBS)
 
     def __len__(self):
         return len(self.imgs)
@@ -80,91 +83,6 @@ class MyDataset(Dataset):
 
         return sample
 
-
-def testResizeThermal(sample,NUM_BBS,bz):
-    sam = sample['image']
-    bbb = sample['bb']
-    tm = sample['tm']
-    gt = sample['gt']
-
-    bbb = bbb.cpu()
-    bbb = bbb.view(-1,5)
-
-
-    gt = gt.cpu()
-    gt = gt.view(-1,5)
-    gt = gt.detach().numpy()
-
-
-    ind = torch.arange(bz).view(-1,1)
-    ind = ind.repeat(1,NUM_BBS).view(-1,1)
-    bbb[:,0] = ind[:,0]
-
-    labels_output = resizeThermal(tm, bbb)
-    print(labels_output.size())
-    labels_output = labels_output.type('torch.ByteTensor')
-    out = labels_output.cpu()
-    out = out.detach().numpy()
-    ther = convertTensor2Img(tm)
-    bbb = bbb.detach().numpy()
-    imgg = visualizeRP(ther, bbb)
-
-
-    cv2.imshow('winname', imgg)
-    for ind,labels in enumerate(out):
-        # print(type(labels.transpose((1, 2, 0))[0][0][0]))
-        cv2.imshow('bbs{}'.format(ind), labels.transpose((1, 2, 0)))
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-def testDataset(sample,norm = False):
-    print(sample['img_info'])
-    k = 1
-    if norm:
-        k = 255
-    sam = sample['image']*k
-    tm = sample['tm']*k
-    bbs = sample['bb']
-    gt = sample['gt']
-    # print(bbs.size())
-    # print(gt.size())
-    # print(gt)
-
-    bbs = bbs.cpu()
-    bbs = bbs.view(-1,5)
-    bbs = bbs.detach().numpy()
-
-    gt = gt.cpu()
-    gt = gt.view(-1,5)
-    gt = gt.detach().numpy()
-    print(gt)
-
-    # for ind,labels in enumerate(labels_output):
-    #     print(labels.shape)
-    #     cv2.imshow('bbs{}'.format(ind), labels)
-    raw = convertTensor2Img(sam)
-    ther = convertTensor2Img(tm)
-    draw_bbs = visualizeRP(raw, bbs,gt)
-
-    # img,bboxes = flipBoundingBox(raw, bbs)
-    # draw_flip_bbs = visualizeRP(img, bboxes,gt)
-
-    cv2.imshow('raw',raw)
-    cv2.imshow('thermal', ther)
-    cv2.imshow('bbs', draw_bbs)
-    # cv2.imshow('flip_bbs', draw_flip_bbs)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    # io.imshow(sam)
-    # plt.show()
-    #
-    # roi_pool = ROIPool((50, 50), 1)
-    # tm, bbb = tm.to(device),bbb.to(device)
-    # labels_output = roi_pool(tm,bbb)
-    # print(labels_output.shape)
-
-
-
 if __name__ == '__main__':
     THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
     ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
@@ -190,11 +108,12 @@ if __name__ == '__main__':
     NUM_BBS = my_dataset.NUM_BBS
     print('NUM_BBS',NUM_BBS)
 
-    print(sample['image'])
-    print('===================')
-    print(sample['tm'])
+    # print(sample['image'])
+    # print('===================')
+    # print(sample['tm'].size())
+    # print(torch.max(sample['tm']))
 
-    # testDataset(sample,True)
+    testDataset(sample,True)
     # img = sample['image']
     # bbb = sample['bb']
     # bbb = bbb.view(-1,5)

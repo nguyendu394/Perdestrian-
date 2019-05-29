@@ -7,6 +7,9 @@ from skimage import io, color, exposure,restoration
 from PIL import Image
 import torch
 
+
+mean=(0,485, 0,456, 0,406)
+std=(0,229, 0,224, 0,225)
 def equalizeHist(gray):
     # gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(8, 8))
@@ -20,7 +23,7 @@ def equalizeHist(gray):
 
     return gray
 
-def visualizeRP(img,bbs, gt = None, fm = 'ltrb',c = 255):
+def visualizeRP(img,bbs, gt=None, fm = 'ltrb',c = 255):
     '''
     Visualize region proposal
     input: img (numpy) WxHxC
@@ -29,7 +32,6 @@ def visualizeRP(img,bbs, gt = None, fm = 'ltrb',c = 255):
     '''
 
     bbs = bbs.astype(np.int32)
-
     for d in bbs:
         id,l,t,r,b = d
         # print(l,t,r,b)
@@ -39,17 +41,18 @@ def visualizeRP(img,bbs, gt = None, fm = 'ltrb',c = 255):
         elif fm == 'ltwh':
             img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,0),1)
             # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
-    if np.prod(gt.shape):
-        gt = gt.astype(np.int32)
-        for d in gt:
-            l,t,r,b, cls = d
-            # print(l,t,r,b)
-            if fm == 'ltrb':
-                img = cv2.rectangle(img,(l,t),(r,b),(255,c,0),1)
+        if gt:
+            if np.prod(gt.shape):
+                gt = gt.astype(np.int32)
+                for d in gt:
+                    l,t,r,b, cls = d
+                    # print(l,t,r,b)
+                    if fm == 'ltrb':
+                        img = cv2.rectangle(img,(l,t),(r,b),(255,c,0),1)
 
-            elif fm == 'ltwh':
-                img = cv2.rectangle(img,(l,t),(r+l,b+t),(255,c,0),1)
-                # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
+                    elif fm == 'ltwh':
+                        img = cv2.rectangle(img,(l,t),(r+l,b+t),(255,c,0),1)
+                        # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
     return img
 
 def createImgsFilesName(path,name_file):
@@ -88,12 +91,14 @@ def convertRoisACF2CSV(path,new):
 
     print('Done!')
 
-def convertTensor2Img(out):
+def convertTensor2Img(out,norm=True):
     '''
     Visualize a Tensors
     input: a Tensors on cpu (1x1xhxw)
     output: a image(numpy)
     '''
+    if norm:
+        out = out*255
     out = out.type('torch.ByteTensor')
     out = out.cpu()
     out = out.detach().numpy()
@@ -191,8 +196,8 @@ def flipBoundingBox(img,bboxes,gts):
 
 if __name__ == '__main__':
     # createImgsFilesName('/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test', 'mydata/imgs_test.txt')
-    main()
+    # main()
     # print('./models/model14/log14.txt')
-    # true_txt = './models/model15/log15.txt'
+    true_txt = './models/model23/log23.txt'
     # test_txt = './test2_model21_epoch7.txt'
-    # visualizeErrorLoss(test_txt)
+    visualizeErrorLoss(true_txt)
