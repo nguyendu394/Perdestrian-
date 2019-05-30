@@ -12,7 +12,8 @@ import torchvision.ops.roi_pool as ROIPool
 from RRN import MyRRN
 import vgg, cv2, time
 from mydataset import MyDataset
-
+from torchvision.ops import box_iou
+from my_transforms import *
 
 rgb_mean = (0.4914, 0.4822, 0.4465)
 rgb_std = (0.2023, 0.1994, 0.2010)
@@ -102,7 +103,8 @@ def train():
     # cudnn.benchmark = True
     # transform = ToTensor()
     full_transform=transforms.Compose([RandomHorizontalFlip(),
-                                       ToTensor(),])
+                                       ToTensor(),
+                                       my_normalize()])
                                   # Normalize(rgb_mean,rgb_std)])
 
     my_dataset = MyDataset(imgs_csv=IMGS_CSV,rois_csv=ROIS_CSV,
@@ -115,8 +117,6 @@ def train():
 
     MSDN_net = MyMSDN()
     MSDN_net.to(device)
-    # raw_vgg16.to(device)
-    print(MSDN_net)
 
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT)
@@ -164,6 +164,6 @@ def train():
             # optimizer.step()
 if __name__ == '__main__':
     # train()
-    cls, pros = torch.load('out_MSDN.pth')
+    cls, pros = torch.load('out_RRN.pth')
     print(cls.size())
-    print(pros.size())
+    print(pros)

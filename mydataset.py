@@ -53,10 +53,21 @@ class MyDataset(Dataset):
         image = cv2.imread(img_name)
 
         bbs = self.bb.loc[idx].iloc[:self.NUM_BBS].reset_index().as_matrix()
+
         bbs = bbs.astype('float')
 
         tm = cv2.imread(os.path.join(self.ther_path,self.imgs.iloc[idx,0].replace('visible','lwir')),0)
 
+        gt_boxes_padding = self.getGTboxesPadding(gt_name)
+
+        sample = {'img_info':img_name, 'image': image, 'bb': bbs, 'tm':tm, 'gt':gt_boxes_padding}
+
+        if self.transform:
+            sample = self.transform(sample)
+
+        return sample
+
+    def getGTboxesPadding(self,gt_name):
         gt_boxes = []
 
         with open(gt_name,'r') as f:
@@ -75,19 +86,13 @@ class MyDataset(Dataset):
 
             # gt_boxes_padding = torch.FloatTensor(self.MAX_GTS, 5).zero_()
             gt_boxes_padding[:num_gts,:] = gt_boxes[:num_gts]
-
-        sample = {'img_info':img_name, 'image': image, 'bb': bbs, 'tm':tm, 'gt':gt_boxes_padding}
-
-        if self.transform:
-            sample = self.transform(sample)
-
-        return sample
+        return gt_boxes_padding
 
 if __name__ == '__main__':
     THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
     ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
     IMGS_CSV = 'mydata/imgs_train.csv'
-    ROIS_CSV = 'mydata/rois_trainKaist_thr70_1.csv'
+    ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
     full_transform=transforms.Compose([RandomHorizontalFlip(),
                                        ToTensor(),
                                        my_normalize()])

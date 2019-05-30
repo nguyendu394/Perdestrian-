@@ -10,10 +10,15 @@ import torchvision.ops.roi_pool as ROIPool
 
 
 def getSampleDataset(id = None):
+    '''
+        input: id: the index of image in dataset (optional)
+        output: (dict) sample {'image','bb','tm','img_info','gt'}
+                (scaler) maximum number of bbox in a image})
+        '''
     THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
     ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
     IMGS_CSV = 'mydata/imgs_train.csv'
-    ROIS_CSV = 'mydata/rois_trainKaist_thr70_1.csv'
+    ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
     full_transform=transforms.Compose([RandomHorizontalFlip(),
                                        ToTensor(),
                                        my_normalize()])
@@ -36,18 +41,15 @@ def getSampleDataset(id = None):
 
     return sample, my_dataset.NUM_BBS
 
-def testDataset(sample,norm = False):
+def testDataset(sample,norm = True):
     print(sample['img_info'])
-    k = 1
-    if norm:
-        k = 255
-    sam = sample['image']*k
-    tm = sample['tm']*k
-    bbs = sample['bb']
+
+    sam = sample['image']
+    tm = sample['tm']
+    bbs = sample['bb'][:,:,:-1]
     gt = sample['gt']
     # print(bbs.size())
     # print(gt.size())
-    # print(gt)
 
     bbs = bbs.cpu()
     bbs = bbs.view(-1,5)
@@ -67,60 +69,21 @@ def testDataset(sample,norm = False):
 
     # img,bboxes = flipBoundingBox(raw, bbs)
     # draw_flip_bbs = visualizeRP(img, bboxes,gt)
-
+    print('size of raw',raw.shape)
+    print('size of ther',ther.shape)
+    print('size of bbs',draw_bbs.get().shape)
     cv2.imshow('raw',raw)
     cv2.imshow('thermal', ther)
     cv2.imshow('bbs', draw_bbs)
     # cv2.imshow('flip_bbs', draw_flip_bbs)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-    # io.imshow(sam)
-    # plt.show()
-    #
-    # roi_pool = ROIPool((50, 50), 1)
-    # tm, bbb = tm.to(device),bbb.to(device)
-    # labels_output = roi_pool(tm,bbb)
-    # print(labels_output.shape)
-
-    def testResizeThermal(sample,NUM_BBS,bz):
-        sam = sample['image']
-        bbb = sample['bb']
-        tm = sample['tm']
-        gt = sample['gt']
-
-        bbb = bbb.cpu()
-        bbb = bbb.view(-1,5)
 
 
-        gt = gt.cpu()
-        gt = gt.view(-1,5)
-        gt = gt.detach().numpy()
-
-
-        ind = torch.arange(bz).view(-1,1)
-        ind = ind.repeat(1,NUM_BBS).view(-1,1)
-        bbb[:,0] = ind[:,0]
-
-        labels_output = resizeThermal(tm, bbb)
-        print(labels_output.size())
-        labels_output = labels_output.type('torch.ByteTensor')
-        out = labels_output.cpu()
-        out = out.detach().numpy()
-        ther = convertTensor2Img(tm)
-        bbb = bbb.detach().numpy()
-        imgg = visualizeRP(ther, bbb)
-
-
-        cv2.imshow('winname', imgg)
-        for ind,labels in enumerate(out):
-            # print(type(labels.transpose((1, 2, 0))[0][0][0]))
-            cv2.imshow('bbs{}'.format(ind), labels.transpose((1, 2, 0)))
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
 
 def testResizeThermal(sample,NUM_BBS,bz):
     sam = sample['image']
-    bbb = sample['bb']
+    bbb = sample['bb'][:,:,:-1]
     tm = sample['tm']
     gt = sample['gt']
 
@@ -138,8 +101,8 @@ def testResizeThermal(sample,NUM_BBS,bz):
     bbb[:,0] = ind[:,0]
 
     labels_output = resizeThermal(tm, bbb)
-    print(labels_output.size())
-    labels_output = labels_output.type('torch.ByteTensor')
+
+    # labels_output = labels_output.type('torch.ByteTensor')
     out = labels_output.cpu()
     out = out.detach().numpy()
     ther = convertTensor2Img(tm)
@@ -149,8 +112,11 @@ def testResizeThermal(sample,NUM_BBS,bz):
 
     cv2.imshow('winname', imgg)
     for ind,labels in enumerate(out):
-        # print(type(labels.transpose((1, 2, 0))[0][0][0]))
-        cv2.imshow('bbs{}'.format(ind), labels.transpose((1, 2, 0)))
+        p = labels.transpose((1, 2, 0))
+
+        if p.dtype == np.float32:
+            p = (p*255).astype(np.uint8)
+        cv2.imshow('bbs{}'.format(ind), p)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
@@ -203,10 +169,10 @@ def testRRN_Pretrain(sample,pre,num, norm=True,bz=1):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def  testROIpool(sample,NUM_BBS,norm=True,bz=1):
+def  testROIpool(sample,NUM_BBS,bz=1):
     device = torch.device("cuda:0")
     sam = sample['image']
-    bbs = sample['bb']
+    bbs = sample['bb'][:,:,:-1] #get rid of score
 
     bbs=bbs.view(-1, 5)
     ind = torch.arange(bz,requires_grad=False).view(-1,1)
@@ -214,10 +180,10 @@ def  testROIpool(sample,NUM_BBS,norm=True,bz=1):
     bbs[:,0] = ind[:,0]
 
     sam,bbs = sam.to(device),bbs.to(device)
-    simg = ROIPool(sam,bbs,(50,50),1/16)
+    simg = ROIPool(sam,bbs,(50,50),1)
 
 
-    ther = convertTensor2Img(sam,norm)
+    ther = convertTensor2Img(sam)
 
     bbs = bbs.cpu().detach().numpy()
     img = visualizeRP(ther, bbs)
@@ -226,16 +192,24 @@ def  testROIpool(sample,NUM_BBS,norm=True,bz=1):
 
     simg = simg.cpu().detach().numpy()
     for ind,labels in enumerate(simg):
-        # print('output')
-        p = labels.transpose((1, 2, 0))*255
-        cv2.imshow('rrn{}'.format(ind), p.astype(np.uint8))
+        p = labels.transpose((1, 2, 0))
+        if p.dtype == 'float32':
+            p = (p*255).astype(np.uint8)
+
+        cv2.imshow('rrn{}'.format(ind), p)
 
     cv2.waitKey()
     cv2.destroyAllWindows()
 
-
-if __name__ == '__main__':
+def testNMS():
+    sample,num = getSampleDataset()
+    print(sample['bb'])
+def main():
     pre = 'models/model23/model23_lr_1e-9_bz_6_NBS_128_norm_epoch_3.ptx'
     sample,num = getSampleDataset()
-    # testDataset(sample,norm=True)
-    testROIpool(sample,num)
+    # testDataset(sample)
+    # testROIpool(sample,num)
+    testResizeThermal(sample, num, 1)
+
+if __name__ == '__main__':
+    main()

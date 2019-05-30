@@ -12,16 +12,16 @@ mean=(0,485, 0,456, 0,406)
 std=(0,229, 0,224, 0,225)
 def equalizeHist(gray):
     # gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(8, 8))
-    gray = clahe.apply(gray)
+    # clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(8, 8))
+    # gray = clahe.apply(gray)
     # img = color.rgb2hsv(img)
     # gray = color.rgb2gray(img)
-    # gray = exposure.equalize_adapthist(gray,clip_limit=0.03)
-    # gray = restoration.denoise_tv_chambolle(gray , weight=0.1)
+    gray = exposure.equalize_adapthist(gray,clip_limit=0.03)
+    gray = restoration.denoise_tv_chambolle(gray , weight=0.1)
     # claheImg = cv2.equalizeHist(img)
-    gray = cv2.fastNlMeansDenoising(gray,None,4,7,21)
+    # gray = cv2.fastNlMeansDenoising(gray,None,4,7,21)
 
-    return gray
+    return gray*255
 
 def visualizeRP(img,bbs, gt=None, fm = 'ltrb',c = 255):
     '''
@@ -41,7 +41,7 @@ def visualizeRP(img,bbs, gt=None, fm = 'ltrb',c = 255):
         elif fm == 'ltwh':
             img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,0),1)
             # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
-        if gt:
+        if gt is not None:
             if np.prod(gt.shape):
                 gt = gt.astype(np.int32)
                 for d in gt:
@@ -67,12 +67,11 @@ def createImgsFilesName(path,name_file):
             f.write(name+'\n')
     print('Done!')
 
-def convertRoisACF2CSV(path,new):
+def convertRoisACF2CSV(path,new,isNMS=False):
     '''
         Convert the file of ACF into CSV files
         input: path:  of txt file
                 new: the new file
-
     '''
     with open(path,'r') as f:
         data = f.readlines()
@@ -87,18 +86,24 @@ def convertRoisACF2CSV(path,new):
             t = max(float(t),0)
             r = max(float(r),0)
             b = max(float(b),0)
-            f.write('{},{},{},{},{}\n'.format(id,l,t,r,b))
+            if isNMS:
+                f.write('{},{},{},{},{},{}\n'.format(id,l,t,r,b,s))
+            else:
+                f.write('{},{},{},{},{}\n'.format(id,l,t,r,b))
 
     print('Done!')
 
-def convertTensor2Img(out,norm=True):
+def convertTensor2Img(out):
     '''
     Visualize a Tensors
     input: a Tensors on cpu (1x1xhxw)
     output: a image(numpy)
     '''
-    if norm:
+
+
+    if out.dtype == torch.float:
         out = out*255
+
     out = out.type('torch.ByteTensor')
     out = out.cpu()
     out = out.detach().numpy()
@@ -107,6 +112,7 @@ def convertTensor2Img(out,norm=True):
         img = out[0].transpose((1, 2, 0))
     elif len(out.shape) == 3:
         img = out.transpose((1, 2, 0))
+
     return img
 
 def resizeThermal(img,rois):
@@ -171,9 +177,9 @@ def visualizeErrorLoss(true_txt, false_txt=None):
 def main():
     # img = cv2.imread('I01793.jpg')
     bbs_txt = '../ngoc/toolbox/detector/models/Dets_TrainKaist_Thr70.txt'
-    bbs_csv = 'mydata/rois_trainKaist_thr70_1.csv'
+    bbs_csv = 'mydata/rois_trainKaist_thr70_MSDN.csv'
 
-    convertRoisACF2CSV(bbs_txt, bbs_csv)
+    convertRoisACF2CSV(bbs_txt, bbs_csv,isNMS=True)
 
 def flipBoundingBox(img,bboxes,gts):
     img_center = np.array(img.shape[:2])[::-1]/2
@@ -196,8 +202,8 @@ def flipBoundingBox(img,bboxes,gts):
 
 if __name__ == '__main__':
     # createImgsFilesName('/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test', 'mydata/imgs_test.txt')
-    # main()
+    main()
     # print('./models/model14/log14.txt')
-    true_txt = './models/model23/log23.txt'
-    # test_txt = './test2_model21_epoch7.txt'
-    visualizeErrorLoss(true_txt)
+    # true_txt = './models/model23/log23.txt'
+    # # test_txt = './test2_model21_epoch7.txt'
+    # visualizeErrorLoss(true_txt)

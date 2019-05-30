@@ -49,11 +49,11 @@ def train():
 
     params = {'batch_size': 6,
           'shuffle': True,
-          'num_workers': 24}
+          'num_workers': 12}
     print(params)
     max_epoch = 10
     print('max_epoch',max_epoch)
-    LR = 1e-9 #learning rate
+    LR = 1e-6 #learning rate
     print('learning_rate',LR)
     MT = 0.9 #momentum
 
@@ -73,8 +73,8 @@ def train():
     RRN_net = MyRRN()
     RRN_net.to(device)
     NUM_BBS = my_dataset.NUM_BBS
-    print('NUM_BBS',NUM_BBS)
-    RRN_net.load_state_dict(torch.load('models/model23/model23_lr_1e-9_bz_6_NBS_128_norm_epoch_3.ptx'))
+
+    # RRN_net.load_state_dict(torch.load('models/model23/model23_lr_1e-9_bz_6_NBS_128_norm_epoch_3.ptx'))
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,RRN_net.parameters()), lr=LR, momentum=MT)
 
@@ -130,11 +130,11 @@ def train():
             if i % 10 == 9:    # In mỗi 2000 mini-batches.
                 text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
                 print(text)
-                with open('models/model23/log23.txt','a') as f:
+                with open('models/model24/log24.txt','a') as f:
                     f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(RRN_net.state_dict(), 'models/model23/model23_lr_1e-9_bz_6_NBS_128_norm_epoch_{}.pth'.format(epoch))
+        torch.save(RRN_net.state_dict(), 'models/model24/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_{}.pth'.format(epoch))
     print('Huấn luyện xong')
 
 
@@ -214,31 +214,4 @@ def test():
 
 
 if __name__ == '__main__':
-    # train()
-
-    THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
-    ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
-    IMGS_CSV = 'mydata/imgs_train.csv'
-    ROIS_CSV = 'mydata/rois_trainKaist_thr70_1.csv'
-    full_transform=transforms.Compose([RandomHorizontalFlip(),
-                                       ToTensor(),
-                                       my_normalize()])
-                                  # Normalize(rgb_mean,rgb_std)])
-
-    device = torch.device("cuda:0")
-    params = {'batch_size':1,
-              'shuffle':True,
-              'num_workers':24}
-
-
-    my_dataset = MyDataset(imgs_csv=IMGS_CSV,rois_csv=ROIS_CSV,
-    root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = full_transform)
-    print(my_dataset.__len__())
-    dataloader = DataLoader(my_dataset, **params)
-    dataiter = iter(dataloader)
-    sample = dataiter.next()
-    # # sample = my_dataset[789]
-    NUM_BBS = my_dataset.NUM_BBS
-    print('AAAA')
-    # testRRN_Pretrain(sample, 'models/model23/model23_lr_1e-9_bz_6_NBS_128_norm_epoch_3.ptx')
-    # testDataset()
+    train()
