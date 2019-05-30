@@ -113,7 +113,6 @@ def train():
     dataloader = DataLoader(my_dataset, **params)
     # print(list(aa.front_subnetB.parameters())[2])
     device = torch.device("cuda:0")
-    NUM_BBS = my_dataset.NUM_BBS
 
     MSDN_net = MyMSDN()
     MSDN_net.to(device)
@@ -129,10 +128,11 @@ def train():
             sample = data
             sam = sample['image']
             bbb = sample['bb']
+            num=bbb.size(1)
             bbb=bbb.view(-1, 5)
 
             ind = torch.arange(params['batch_size'],requires_grad=False).view(-1,1)
-            ind = ind.repeat(1,NUM_BBS).view(-1,1)
+            ind = ind.repeat(1,num).view(-1,1)
             bbb[:,0] = ind[:,0]
 
             tm = sample['tm']

@@ -53,7 +53,7 @@ def train():
     print(params)
     max_epoch = 10
     print('max_epoch',max_epoch)
-    LR = 1e-6 #learning rate
+    LR = 1e-9 #learning rate
     print('learning_rate',LR)
     MT = 0.9 #momentum
 
@@ -72,9 +72,9 @@ def train():
 
     RRN_net = MyRRN()
     RRN_net.to(device)
-    NUM_BBS = my_dataset.NUM_BBS
 
-    # RRN_net.load_state_dict(torch.load('models/model23/model23_lr_1e-9_bz_6_NBS_128_norm_epoch_3.ptx'))
+
+    RRN_net.load_state_dict(torch.load('models/model24/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'))
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,RRN_net.parameters()), lr=LR, momentum=MT)
 
@@ -86,20 +86,15 @@ def train():
             sample = data
             sam = sample['image']
             bbb = sample['bb']
+            num = bbb.size(1)
+
             bbb=bbb.view(-1, 5)
 
             #reset id
             # bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
             ind = torch.arange(params['batch_size'],requires_grad=False).view(-1,1)
-            ind = ind.repeat(1,NUM_BBS).view(-1,1)
+            ind = ind.repeat(1,num).view(-1,1)
             bbb[:,0] = ind[:,0]
-
-
-            # idx = -1
-            # for j,v in enumerate(bbb[:,0]):
-            #     if not j%NUM_BBS:
-            #         idx = idx + 1
-            #     bbb[j,0] = idx
 
 
             tm = sample['tm']
@@ -130,11 +125,11 @@ def train():
             if i % 10 == 9:    # In mỗi 2000 mini-batches.
                 text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
                 print(text)
-                with open('models/model24/log24.txt','a') as f:
+                with open('models/model25/log25.txt','a') as f:
                     f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(RRN_net.state_dict(), 'models/model24/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_{}.pth'.format(epoch))
+        torch.save(RRN_net.state_dict(), 'models/model25/model25_lr_1e-9_bz_6_NBS_128_norm_epoch_{}.pth'.format(epoch))
     print('Huấn luyện xong')
 
 
@@ -162,7 +157,7 @@ def test():
     RRN_net = MyRRN()
     RRN_net.to(device)
     RRN_net.load_state_dict(torch.load('models/model21/model21_lr_1e-7_bz_6_NBS_128_data_True_epoch_7.ptx'))
-    NUM_BBS = my_dataset.NUM_BBS
+
     st = time.time()
     running_loss = 0.0
     total_loss = []
@@ -172,15 +167,14 @@ def test():
         # Lấy dữ liệu
         sam = sample['image']
         bbb = sample['bb']
+        num=bbb.size(1)
         bbb=bbb.view(-1, 5)
         #reset id
         # bbb[:, 0] = bbb[:, 0] - bbb[0, 0]
 
-        idx = -1
-        for j,v in enumerate(bbb[:,0]):
-            if not j%NUM_BBS:
-                idx = idx + 1
-            bbb[j,0] = idx
+        ind = torch.arange(params['batch_size'],requires_grad=False).view(-1,1)
+        ind = ind.repeat(1,num).view(-1,1)
+        bbb[:,0] = ind[:,0]
 
 
         tm = sample['tm']

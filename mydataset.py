@@ -37,7 +37,7 @@ class MyDataset(Dataset):
         self.transform = transform
         self.ther_path = ther_path
         self.gt = None
-        self.NUM_BBS = 4
+        self.NUM_BBS = 128
         self.MAX_GTS = 9
         print('NUM_BBS:',self.NUM_BBS)
 
@@ -52,7 +52,7 @@ class MyDataset(Dataset):
 
         image = cv2.imread(img_name)
 
-        bbs = self.bb.loc[idx].iloc[:self.NUM_BBS].reset_index().as_matrix()
+        bbs = self.bb.loc[idx].iloc[:].reset_index().as_matrix()
 
         bbs = bbs.astype('float')
 
@@ -110,8 +110,7 @@ if __name__ == '__main__':
     dataiter = iter(dataloader)
     sample = dataiter.next()
     # sample = my_dataset[789]
-    NUM_BBS = my_dataset.NUM_BBS
-    print('NUM_BBS',NUM_BBS)
+
 
     # print(sample['image'])
     # print('===================')

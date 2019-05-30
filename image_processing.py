@@ -202,8 +202,8 @@ def flipBoundingBox(img,bboxes,gts):
 
 if __name__ == '__main__':
     # createImgsFilesName('/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test', 'mydata/imgs_test.txt')
-    main()
+    # main()
     # print('./models/model14/log14.txt')
-    # true_txt = './models/model23/log23.txt'
+    true_txt = './models/model24/log24.txt'
     # # test_txt = './test2_model21_epoch7.txt'
-    # visualizeErrorLoss(true_txt)
+    visualizeErrorLoss(true_txt)

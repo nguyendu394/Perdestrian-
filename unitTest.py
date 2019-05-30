@@ -7,13 +7,14 @@ from mydataset import MyDataset
 from image_processing import convertTensor2Img, visualizeRP,resizeThermal
 from RRN import MyRRN
 import torchvision.ops.roi_pool as ROIPool
+from torchvision.ops import nms
 
-
-def getSampleDataset(id = None):
+def getDataLoader(bz=1):
     '''
         input: id: the index of image in dataset (optional)
+               bz: batch size
         output: (dict) sample {'image','bb','tm','img_info','gt'}
-                (scaler) maximum number of bbox in a image})
+
         '''
     THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
     ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
@@ -24,7 +25,7 @@ def getSampleDataset(id = None):
                                        my_normalize()])
                                   # Normalize(rgb_mean,rgb_std)])
     device = torch.device("cuda:0")
-    params = {'batch_size':1,
+    params = {'batch_size':bz,
               'shuffle':True,
               'num_workers':24}
     print(params)
@@ -33,15 +34,9 @@ def getSampleDataset(id = None):
     root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = full_transform)
     print(my_dataset.__len__())
     dataloader = DataLoader(my_dataset, **params)
-    dataiter = iter(dataloader)
-    if id:
-        sample = my_dataset[id]
-    else:
-        sample = dataiter.next()
+    return dataloader
 
-    return sample, my_dataset.NUM_BBS
-
-def testDataset(sample,norm = True):
+def testDataset(sample):
     print(sample['img_info'])
 
     sam = sample['image']
@@ -81,13 +76,14 @@ def testDataset(sample,norm = True):
 
 
 
-def testResizeThermal(sample,NUM_BBS,bz):
+def testResizeThermal(sample,bz):
     sam = sample['image']
     bbb = sample['bb'][:,:,:-1]
     tm = sample['tm']
     gt = sample['gt']
 
     bbb = bbb.cpu()
+    num = bbb.size(1)
     bbb = bbb.view(-1,5)
 
 
@@ -97,7 +93,7 @@ def testResizeThermal(sample,NUM_BBS,bz):
 
 
     ind = torch.arange(bz).view(-1,1)
-    ind = ind.repeat(1,NUM_BBS).view(-1,1)
+    ind = ind.repeat(1,num).view(-1,1)
     bbb[:,0] = ind[:,0]
 
     labels_output = resizeThermal(tm, bbb)
@@ -120,20 +116,21 @@ def testResizeThermal(sample,NUM_BBS,bz):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def testRRN_Pretrain(sample,pre,num, norm=True,bz=1):
+def testRRN_Pretrain(sample,pre, norm=True,bz=1):
     device = torch.device("cuda:0")
     RRN_net = MyRRN()
     RRN_net.to(device)
     RRN_net.load_state_dict(torch.load(pre))
-    NUM_BBS = num
+
     sam = sample['image']
     bbb = sample['bb']
     tm = sample['tm']
     gt = sample['gt']
+    num=bbb.size(1)
     bbb=bbb.view(-1, 5)
 
     ind = torch.arange(bz,requires_grad=False).view(-1,1)
-    ind = ind.repeat(1,NUM_BBS).view(-1,1)
+    ind = ind.repeat(1,num).view(-1,1)
     bbb[:,0] = ind[:,0]
 
     labels_output = resizeThermal(tm, bbb)
@@ -169,14 +166,15 @@ def testRRN_Pretrain(sample,pre,num, norm=True,bz=1):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def  testROIpool(sample,NUM_BBS,bz=1):
+def  testROIpool(sample):
     device = torch.device("cuda:0")
     sam = sample['image']
     bbs = sample['bb'][:,:,:-1] #get rid of score
-
+    bz = bbb.size(0)
+    num = bbb.size(1)
     bbs=bbs.view(-1, 5)
     ind = torch.arange(bz,requires_grad=False).view(-1,1)
-    ind = ind.repeat(1,NUM_BBS).view(-1,1)
+    ind = ind.repeat(1,num).view(-1,1)
     bbs[:,0] = ind[:,0]
 
     sam,bbs = sam.to(device),bbs.to(device)
@@ -201,15 +199,40 @@ def  testROIpool(sample,NUM_BBS,bz=1):
     cv2.waitKey()
     cv2.destroyAllWindows()
 
-def testNMS():
-    sample,num = getSampleDataset()
-    print(sample['bb'])
+def testNMS(bbs):
+    # idx = bbs[:,:,0].view(-1)
+    bbox = bbs[:,:,1:-1].view(-1,4)
+    score = bbs[:,:,-1].view(-1)
+    bbox,score = bbox.cuda(),score.cuda()
+    keep = nms(bbox,score,0.5)
+    if bbox.size(0) == keep.size(0):
+        return True
+    else:
+        return False
 def main():
     pre = 'models/model23/model23_lr_1e-9_bz_6_NBS_128_norm_epoch_3.ptx'
-    sample,num = getSampleDataset()
-    # testDataset(sample)
-    # testROIpool(sample,num)
-    testResizeThermal(sample, num, 1)
+    ans = []
+    dataloader = getDataLoader()
+    for i, sample in enumerate(dataloader):
+        print(i)
+        bbs = sample['bb'].view(1,-1,6)
+        check = testNMS(bbs)
+        if check == False:
+            ans.append(i)
 
+    # testDataset(sample)
+    # testROIpool(sample)
+    # testResizeThermal(sample)
+    print(ans)
+    print(len(ans))
 if __name__ == '__main__':
     main()
+    # dataiter = iter(dataloader)
+    # if id:
+    #     sample = my_dataset[id]
+    #     # sample['image'] = sample['image'].view(1,-1,6)
+    #     # sample['bb'] = sample['bb'].view(1,-1,6)
+    #     # sample['tm'] = sample['tm'].view(1,-1,6)
+    #     # sample['gt'] = sample['gt'].view(1,-1,6)
+    # else:
+    #     sample = dataiter.next()
