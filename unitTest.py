@@ -74,15 +74,14 @@ def testDataset(sample):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-
-
-def testResizeThermal(sample,bz):
+def testResizeThermal(sample):
     sam = sample['image']
     bbb = sample['bb'][:,:,:-1]
     tm = sample['tm']
     gt = sample['gt']
 
     bbb = bbb.cpu()
+    bz = bbb.size(0)
     num = bbb.size(1)
     bbb = bbb.view(-1,5)
 
@@ -116,18 +115,19 @@ def testResizeThermal(sample,bz):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-def testRRN_Pretrain(sample,pre, norm=True,bz=1):
+def testRRN_Pretrain(sample,pre):
     device = torch.device("cuda:0")
     RRN_net = MyRRN()
     RRN_net.to(device)
     RRN_net.load_state_dict(torch.load(pre))
 
     sam = sample['image']
-    bbb = sample['bb']
+    bbb = sample['bb'][:,:,:-1]
     tm = sample['tm']
     gt = sample['gt']
-    num=bbb.size(1)
-    bbb=bbb.view(-1, 5)
+    bz = bbb.size(0)
+    num = bbb.size(1)
+    bbb = bbb.view(-1, 5)
 
     ind = torch.arange(bz,requires_grad=False).view(-1,1)
     ind = ind.repeat(1,num).view(-1,1)
@@ -149,19 +149,23 @@ def testRRN_Pretrain(sample,pre, norm=True,bz=1):
 
     bbb = bbb.cpu().detach().numpy()
 
-    ther = convertTensor2Img(tm,norm)
+    ther = convertTensor2Img(tm)
     imgg = visualizeRP(ther, bbb)
     # print(imgg.dtype)
     cv2.imshow('aa',imgg)
 
     for ind,labels in enumerate(out_RRN):
         # print('output')
-        p = labels.transpose((1, 2, 0))*255
-        cv2.imshow('rrn{}'.format(ind), p.astype(np.uint8))
+        p = labels.transpose((1, 2, 0))
+        if p.dtype == np.float32:
+            p = (p*255).astype(np.uint8)
+        cv2.imshow('rrn{}'.format(ind), p)
 
     for ind,labels in enumerate(out):
-        p = labels.transpose((1, 2, 0))*255
-        cv2.imshow('bbs{}'.format(ind), p.astype(np.uint8))
+        p = labels.transpose((1, 2, 0))
+        if p.dtype == np.float32:
+            p = (p*255).astype(np.uint8)
+        cv2.imshow('bbs{}'.format(ind), p)
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
@@ -209,30 +213,23 @@ def testNMS(bbs):
         return True
     else:
         return False
-def main():
-    pre = 'models/model23/model23_lr_1e-9_bz_6_NBS_128_norm_epoch_3.ptx'
-    ans = []
-    dataloader = getDataLoader()
-    for i, sample in enumerate(dataloader):
-        print(i)
-        bbs = sample['bb'].view(1,-1,6)
-        check = testNMS(bbs)
-        if check == False:
-            ans.append(i)
 
+def main():
+    pre = 'models/model24/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'
+
+    dataloader = getDataLoader()
+    dataiter = iter(dataloader)
+    sample = dataiter.next()
     # testDataset(sample)
     # testROIpool(sample)
     # testResizeThermal(sample)
-    print(ans)
-    print(len(ans))
+    testRRN_Pretrain(sample, pre)
 if __name__ == '__main__':
-    main()
-    # dataiter = iter(dataloader)
-    # if id:
-    #     sample = my_dataset[id]
-    #     # sample['image'] = sample['image'].view(1,-1,6)
-    #     # sample['bb'] = sample['bb'].view(1,-1,6)
-    #     # sample['tm'] = sample['tm'].view(1,-1,6)
-    #     # sample['gt'] = sample['gt'].view(1,-1,6)
-    # else:
-    #     sample = dataiter.next()
+    # main()
+    a = torch.randn(4,5)
+    b=a.numpy()
+
+    print(a)
+    b=b*5
+    a=a+10
+    print(b)
