@@ -37,10 +37,10 @@ class MyDataset(Dataset):
         self.root_dir = root_dir
         self.transform = transform
         self.ther_path = ther_path
-        self.gt = None
-        self.NUM_BBS = 4
         self.MAX_GTS = 9
-        print('NUM_BBS:',self.NUM_BBS)
+        self.rois_per_image = 128
+        self.num_classes = 2
+        # print('NUM_BBS:',self.NUM_BBS)
 
     def __len__(self):
         return len(self.imgs)
@@ -53,7 +53,7 @@ class MyDataset(Dataset):
 
         image = cv2.imread(img_name)
 
-        bbs = self.bb.loc[idx].iloc[:].reset_index().as_matrix()
+        bbs = self.bb.loc[idx].reset_index().as_matrix()
 
         bbs = bbs.astype('float')
 
@@ -70,15 +70,46 @@ class MyDataset(Dataset):
             gt_boxes.append(temp)
 
         all_rois = getAllrois(bbs[:,:-1], gt_boxes)
+        all_rois = torch.from_numpy(all_rois)
         #padding ground-truth
         gt_boxes_padding = getGTboxesPadding(gt_boxes,self.MAX_GTS)
+        gt_boxes_padding = torch.from_numpy(gt_boxes_padding)
+        # print('Size of all ROIS', all_rois.size())
+        # all_rois,gt_boxes_padding = all_rois.cuda(),gt_boxes_padding.cuda()
+        fg_rois_per_image = int(np.round(0.25 * self.rois_per_image))
+        label,rois,gt_rois = sample_rois_tensor(all_rois, gt_boxes_padding, fg_rois_per_image, self.rois_per_image, self.num_classes)
 
-        sample = {'img_info':img_name, 'image': image, 'bb': all_rois, 'tm':tm, 'gt':gt_boxes_padding}
+        sample = {'img_info':img_name,
+                  'image': image,
+                  'label': label,
+                  'bb': rois,
+                  'tm': tm,
+                  'gt': gt_boxes_padding.cpu(),
+                  'gt_roi': gt_rois
+                  }
 
         if self.transform:
             sample = self.transform(sample)
 
         return sample
+
+def _compute_targets(ex_rois, gt_rois, labels):
+    """Compute bounding-box regression targets for an image."""
+    TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED = True
+    TRAIN.BBOX_NORMALIZE_MEANS = (0.0, 0.0, 0.0, 0.0)
+    TRAIN.BBOX_NORMALIZE_STDS = (0.1, 0.1, 0.2, 0.2)
+
+    assert ex_rois.shape[0] == gt_rois.shape[0]
+    assert ex_rois.shape[1] == 4
+    assert gt_rois.shape[1] == 4
+
+    targets = bbox_transform(ex_rois, gt_rois)
+    if TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
+        # Optionally normalize targets by a precomputed mean and stdev
+        targets = ((targets - np.array(TRAIN.BBOX_NORMALIZE_MEANS))
+                   / np.array(TRAIN.BBOX_NORMALIZE_STDS))
+    return np.hstack(
+        (labels[:, np.newaxis], targets)).astype(np.float32, copy=False)
 
 if __name__ == '__main__':
     THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
@@ -111,11 +142,20 @@ if __name__ == '__main__':
     all_rois = sample['bb']
     #
     gt_boxes = sample['gt']
+
     all_rois = torch.from_numpy(all_rois)
     gt_boxes = torch.from_numpy(gt_boxes)
-    all_rois,gt_boxes = all_rois.cuda(),gt_boxes.cuda()
-    label,rois = sample_rois_tensor(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_classes)
-    print(label)
+    # all_rois,gt_boxes = all_rois.cuda(),gt_boxes.cuda()
+    label,rois,bbox_targets, bbox_inside_weights = sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_classes)
+
+    print(label[:6])
     print(label.shape)
+
     print(rois[:6,:])
     print(rois.shape)
+
+    print(bbox_targets[:6,:])
+    print(bbox_targets.shape)
+
+    print(bbox_inside_weights[:6,:])
+    print(bbox_inside_weights.shape)

@@ -53,7 +53,7 @@ def train():
     print(params)
     max_epoch = 10
     print('max_epoch',max_epoch)
-    LR = 1e-9 #learning rate
+    LR = 1e-6 #learning rate
     print('learning_rate',LR)
     MT = 0.9 #momentum
 
@@ -125,11 +125,11 @@ def train():
             if i % 10 == 9:    # In mỗi 2000 mini-batches.
                 text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
                 print(text)
-                with open('models/model25/log25.txt','a') as f:
+                with open('models/model26/log26.txt','a') as f:
                     f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(RRN_net.state_dict(), 'models/model25/model25_lr_1e-9_bz_6_NBS_128_norm_epoch_{}.pth'.format(epoch))
+        torch.save(RRN_net.state_dict(), 'models/model26/model26_lr_1e-6_bz_6_NBS_128_norm_epoch_{}.pth'.format(epoch))
     print('Huấn luyện xong')
 
 

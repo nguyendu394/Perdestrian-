@@ -41,10 +41,12 @@ def testDataset(sample):
 
     sam = sample['image']
     tm = sample['tm']
-    bbs = sample['bb'][:,:,:-1]
+    bbs = sample['bb']
     gt = sample['gt']
-    # print(bbs.size())
-    # print(gt.size())
+    print('sam',sam.size())
+    print('tm',tm.size())
+    print('bbs',bbs.size())
+    print('gt',gt.size())
 
     bbs = bbs.cpu()
     bbs = bbs.view(-1,5)
@@ -76,7 +78,7 @@ def testDataset(sample):
 
 def testResizeThermal(sample):
     sam = sample['image']
-    bbb = sample['bb'][:,:,:-1]
+    bbb = sample['bb']
     tm = sample['tm']
     gt = sample['gt']
 
@@ -122,7 +124,7 @@ def testRRN_Pretrain(sample,pre):
     RRN_net.load_state_dict(torch.load(pre))
 
     sam = sample['image']
-    bbb = sample['bb'][:,:,:-1]
+    bbb = sample['bb']
     tm = sample['tm']
     gt = sample['gt']
     bz = bbb.size(0)
@@ -173,7 +175,7 @@ def testRRN_Pretrain(sample,pre):
 def  testROIpool(sample):
     device = torch.device("cuda:0")
     sam = sample['image']
-    bbs = sample['bb'][:,:,:-1] #get rid of score
+    bbs = sample['bb']
     bz = bbb.size(0)
     num = bbb.size(1)
     bbs=bbs.view(-1, 5)
@@ -220,14 +222,14 @@ def main():
     dataloader = getDataLoader()
     dataiter = iter(dataloader)
     sample = dataiter.next()
-    # testDataset(sample)
+    testDataset(sample)
     # testROIpool(sample)
     # testResizeThermal(sample)
-    testRRN_Pretrain(sample, pre)
+    # testRRN_Pretrain(sample, pre)
 if __name__ == '__main__':
-    # main()
-    a = torch.randn(5)
-    x = a.numpy()
-    b = torch.randn(3)
-    y = b.numpy()
-    print(x.size)
+    main()
+    # a = torch.randn(5)
+    # x = a.numpy()
+    # b = torch.randn(3)
+    # y = b.numpy()
+    # print(x.size)

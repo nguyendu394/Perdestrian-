@@ -183,5 +183,10 @@ def test(aa,bb,cc):
     return aa + bb + cc
 if __name__ == '__main__':
     # main()
-    a = np.random.rand(4,5)
-    print(a.shape[0])
+    img = cv2.imread('mydata/I00000.png')
+    a = torch.from_numpy(img)
+    a = torch.flip(a,(1,2))
+    cv2.imshow('winname', img[:,::-1,:])
+    cv2.imshow('wiame', a.numpy().astype(np.uint8))
+    cv2.waitKey()
+    cv2.destroyAllWindows()
