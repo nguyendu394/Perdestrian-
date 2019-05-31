@@ -226,10 +226,8 @@ def main():
     testRRN_Pretrain(sample, pre)
 if __name__ == '__main__':
     # main()
-    a = torch.randn(4,5)
-    b=a.numpy()
-
-    print(a)
-    b=b*5
-    a=a+10
-    print(b)
+    a = torch.randn(5)
+    x = a.numpy()
+    b = torch.randn(3)
+    y = b.numpy()
+    print(x.size)

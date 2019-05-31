@@ -30,11 +30,11 @@ def main():
 
     # img_path = imgs.loc[37918].values
     #
-    min = 99999999
+    min = -1
     idx = -1
     for i in range(50184):
         aa = bbs.loc[i].reset_index().values
-        if aa.shape[0] < min and aa.shape[0] > 138:
+        if aa.shape[0] > min:
             min = aa.shape[0]
             idx = i
     print(min,idx)
@@ -183,7 +183,5 @@ def test(aa,bb,cc):
     return aa + bb + cc
 if __name__ == '__main__':
     # main()
-    a = torch.randn(5,3)
-    print(type(a))
-    b = a.data
-    print(type(b))
+    a = np.random.rand(4,5)
+    print(a.shape[0])
