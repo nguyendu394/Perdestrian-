@@ -168,7 +168,7 @@ def bbox_transform_batch(ex_rois, gt_rois):
 
     return targets
 
-def _compute_targets(ex_rois, gt_rois, labels):
+def compute_targets(ex_rois, gt_rois, labels):
     """Compute bounding-box regression targets for an image."""
 
     assert ex_rois.shape[0] == gt_rois.shape[0]
@@ -185,12 +185,12 @@ def _compute_targets(ex_rois, gt_rois, labels):
         targets = ((targets - np.array(BBOX_NORMALIZE_MEANS)) / np.array(BBOX_NORMALIZE_STDS))
     return np.hstack((labels[:, np.newaxis], targets)).astype(np.float32, copy=False)
 
-def _compute_targets_pytorch(ex_rois, gt_rois):
+def compute_targets_pytorch(ex_rois, gt_rois):
     """Compute bounding-box regression targets for an image."""
 
-    # assert ex_rois.size(1) == gt_rois.size(1)
-    # assert ex_rois.size(2) == 4
-    # assert gt_rois.size(2) == 4
+    assert ex_rois.size(1) == gt_rois.size(1)
+    assert ex_rois.size(2) == 4
+    assert gt_rois.size(2) == 4
 
     BBOX_NORMALIZE_TARGETS_PRECOMPUTED = True
     BBOX_NORMALIZE_MEANS = torch.FloatTensor((0.0, 0.0, 0.0, 0.0))
@@ -199,7 +199,7 @@ def _compute_targets_pytorch(ex_rois, gt_rois):
     batch_size = ex_rois.size(0)
     rois_per_image = ex_rois.size(1)
 
-    targets = bbox_transform_tensor(ex_rois, gt_rois)
+    targets = bbox_transform_batch(ex_rois, gt_rois)
 
     if BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
         # Optionally normalize targets by a precomputed mean and stdev
@@ -229,7 +229,7 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
         bbox_inside_weights[ind, start:end] = BBOX_INSIDE_WEIGHTS
     return bbox_targets, bbox_inside_weights
 
-def _get_bbox_regression_labels_pytorch(bbox_target_data, labels_batch, num_classes):
+def get_bbox_regression_labels_pytorch(bbox_target_data, labels_batch, num_classes=2):
     """Bounding-box regression targets (bbox_target_data) are stored in a
     compact form b x N x (class, tx, ty, tw, th)
     This function expands those targets into the 4-of-4*K representation used
@@ -239,7 +239,7 @@ def _get_bbox_regression_labels_pytorch(bbox_target_data, labels_batch, num_clas
         bbox_inside_weights (ndarray): b x N x 4K blob of loss weights
     """
 
-    BBOX_INSIDE_WEIGHTS = torch.FloatTensor((1.0, 1.0, 1.0, 1.0))
+    BBOX_INSIDE_WEIGHTS = torch.FloatTensor((1.0,1.0,1.0,1.0))
     batch_size = labels_batch.size(0)
     rois_per_image = labels_batch.size(1)
     clss = labels_batch
@@ -306,15 +306,14 @@ def sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_class
     # Clamp labels for the background RoIs to 0
     labels[fg_rois_per_this_image:] = 0
     rois = all_rois[keep_inds]
-
-    bbox_target_data = _compute_targets(rois[:, 1:5], gt_boxes[gt_assignment[keep_inds], :4], labels)
+    gt_rois = gt_boxes[gt_assignment[keep_inds]]
+    # bbox_target_data = compute_targets(rois[:, 1:5], gt_rois[:,:4], labels)
 
     # bbox_target_data (1 x H x W x A, 5)
     # bbox_targets <- (1 x H x W x A, K x 4)
     # bbox_inside_weights <- (1 x H x W x A, K x 4)
-    bbox_targets, bbox_inside_weights = _get_bbox_regression_labels(bbox_target_data, num_classes=2)
-    return labels, rois, bbox_targets,bbox_inside_weights
-
+    # bbox_targets, bbox_inside_weights = _get_bbox_regression_labels(bbox_target_data, num_classes=2)
+    return labels, rois, gt_rois
 def sample_rois_tensor(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_classes):
     """Generate a random sample of RoIs comprising foreground and background
     examples.
@@ -384,8 +383,25 @@ def sample_rois_tensor(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, nu
     labels[fg_rois_per_this_image:] = 0
     rois = all_rois[keep_inds]
     gt_rois = gt_boxes[gt_assignment[keep_inds]]
-    bbox_target_data = _compute_targets_pytorch(rois[:, 1:5], gt_rois[:,:4])
+    # bbox_target_data = compute_targets_pytorch(rois[:, 1:5], gt_rois[:,:4])
     #
-    # bbox_targets, bbox_inside_weights = _get_bbox_regression_labels_pytorch(bbox_target_data, labelslabels_batch, num_classes=2)
+    # bbox_targets, bbox_inside_weights = _get_bbox_regression_labels_pytorch(bbox_target_data, labels, num_classes=2)
 
     return labels,rois,gt_rois
+
+
+def smooth_l1_loss(bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights, sigma=1.0, dim=[1]):
+
+    sigma_2 = sigma ** 2
+    box_diff = bbox_pred - bbox_targets
+    in_box_diff = bbox_inside_weights * box_diff
+    abs_in_box_diff = torch.abs(in_box_diff)
+    smoothL1_sign = (abs_in_box_diff < 1. / sigma_2).detach().float()
+    in_loss_box = torch.pow(in_box_diff, 2) * (sigma_2 / 2.) * smoothL1_sign \
+                  + (abs_in_box_diff - (0.5 / sigma_2)) * (1. - smoothL1_sign)
+    out_loss_box = bbox_outside_weights * in_loss_box
+    loss_box = out_loss_box
+    for i in sorted(dim, reverse=True):
+      loss_box = loss_box.sum(i)
+    loss_box = loss_box.mean()
+    return loss_box

@@ -3,41 +3,12 @@ import torch
 from torchvision import transforms
 from my_transforms import *
 from torch.utils.data import Dataset, DataLoader
-from mydataset import MyDataset
+from mydataset import MyDataset, getDataLoader
 from image_processing import convertTensor2Img, visualizeRP,resizeThermal
 from RRN import MyRRN
 import torchvision.ops.roi_pool as ROIPool
 from torchvision.ops import nms
 
-def getDataLoader(bz=1,p=0.5,trans=True):
-    '''
-        input: id: the index of image in dataset (optional)
-               bz: batch size
-        output: (dict) sample {'image','bb','tm','img_info','gt'}
-
-        '''
-    THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
-    ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
-    IMGS_CSV = 'mydata/imgs_train.csv'
-    ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
-    full_transform=transforms.Compose([RandomHorizontalFlip(p),
-                                       ToTensor(),
-                                       my_normalize()])
-                                  # Normalize(rgb_mean,rgb_std)])
-    if trans is False:
-        full_transform = None
-
-    device = torch.device("cuda:0")
-    params = {'batch_size':bz,
-              'shuffle':True,
-              'num_workers':24}
-    print(params)
-
-    my_dataset = MyDataset(imgs_csv=IMGS_CSV,rois_csv=ROIS_CSV,
-    root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = full_transform)
-    print(my_dataset.__len__())
-    dataloader = DataLoader(my_dataset, **params)
-    return dataloader
 
 def testDataset(sample):
     print(sample['img_info'])
@@ -222,7 +193,7 @@ def testNMS(bbs):
 def main():
     pre = 'models/model24/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'
 
-    dataloader = getDataLoader(p=5)
+    dataloader = getDataLoader(bz=1)
     dataiter = iter(dataloader)
     sample = dataiter.next()
     testDataset(sample)
@@ -231,7 +202,10 @@ def main():
     # testRRN_Pretrain(sample, pre)
 if __name__ == '__main__':
     main()
-    # a = torch.randn(5)
+    # a = torch.randn(6,5)
+    # print(a)
+    # b = a.view(1,6,5)
+    # print(b)
     # x = a.numpy()
     # b = torch.randn(3)
     # y = b.numpy()

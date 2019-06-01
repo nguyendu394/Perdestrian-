@@ -10,6 +10,8 @@ from my_transforms import *
 from torchvision import transforms
 from torchvision.ops import box_iou
 from proposal_processing import *
+from torch.autograd import Variable
+import torch.nn.functional as F
 # import torchvision.transforms.functional as TF
 # import matplotlib.patches as patches
 # from PIL import Image
@@ -75,8 +77,11 @@ class MyDataset(Dataset):
         gt_boxes_padding = getGTboxesPadding(gt_boxes,self.MAX_GTS)
         gt_boxes_padding = torch.from_numpy(gt_boxes_padding)
         # print('Size of all ROIS', all_rois.size())
+
+        #run on CUDA
         # all_rois,gt_boxes_padding = all_rois.cuda(),gt_boxes_padding.cuda()
         fg_rois_per_image = int(np.round(0.25 * self.rois_per_image))
+        fg_rois_per_image = 1 if fg_rois_per_image == 0 else fg_rois_per_image
         label,rois,gt_rois = sample_rois_tensor(all_rois, gt_boxes_padding, fg_rois_per_image, self.rois_per_image, self.num_classes)
 
         sample = {'img_info':img_name,
@@ -93,69 +98,89 @@ class MyDataset(Dataset):
 
         return sample
 
-def _compute_targets(ex_rois, gt_rois, labels):
-    """Compute bounding-box regression targets for an image."""
-    TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED = True
-    TRAIN.BBOX_NORMALIZE_MEANS = (0.0, 0.0, 0.0, 0.0)
-    TRAIN.BBOX_NORMALIZE_STDS = (0.1, 0.1, 0.2, 0.2)
+def getDataLoader(id = None,bz=1,p=0.5,trans=True):
+    '''
+        input: id: the index of image in dataset (optional)
+               bz: batch size
+        output: (dict) sample {'image','bb','tm','img_info','gt'}
 
-    assert ex_rois.shape[0] == gt_rois.shape[0]
-    assert ex_rois.shape[1] == 4
-    assert gt_rois.shape[1] == 4
-
-    targets = bbox_transform(ex_rois, gt_rois)
-    if TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
-        # Optionally normalize targets by a precomputed mean and stdev
-        targets = ((targets - np.array(TRAIN.BBOX_NORMALIZE_MEANS))
-                   / np.array(TRAIN.BBOX_NORMALIZE_STDS))
-    return np.hstack(
-        (labels[:, np.newaxis], targets)).astype(np.float32, copy=False)
-
-if __name__ == '__main__':
+        '''
     THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
     ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
     IMGS_CSV = 'mydata/imgs_train.csv'
     ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
-    full_transform=transforms.Compose([RandomHorizontalFlip(),
+    full_transform=transforms.Compose([RandomHorizontalFlip(p),
                                        ToTensor(),
                                        my_normalize()])
                                   # Normalize(rgb_mean,rgb_std)])
+    if trans is False:
+        full_transform = None
+
     device = torch.device("cuda:0")
-    params = {'batch_size':1,
+    params = {'batch_size':bz,
               'shuffle':True,
               'num_workers':24}
     print(params)
 
     my_dataset = MyDataset(imgs_csv=IMGS_CSV,rois_csv=ROIS_CSV,
-    root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = None)
+    root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = full_transform)
     print(my_dataset.__len__())
     dataloader = DataLoader(my_dataset, **params)
+    if not id:
+        return dataloader
+    else:
+        return my_dataset[id]
+
+
+
+if __name__ == '__main__':
+    dataloader = getDataLoader(bz=2)
+
     dataiter = iter(dataloader)
-    # sample = dataiter.next()
-    sample = my_dataset[36999]
-    num_classes = 2
-    rois_per_image = 128
-    fg_rois_per_image = int(np.round(0.25 * rois_per_image))
+    sample = dataiter.next()
 
-    # print(sample['image'])
-    # print(sample['bb'].size())
-    all_rois = sample['bb']
+
+    print(sample['image'].shape)
+    print(sample['bb'].shape)
+    print(sample['label'].shape)
+    print(sample['gt'].shape)
+    print(sample['gt_roi'].shape)
+
+    print(sample['gt'])
+    label = sample['label']
+    rois = sample['bb']
+    gt_rois = sample['gt_roi']
     #
-    gt_boxes = sample['gt']
+    # print('='*10)
+    # bbox_target_data = compute_targets(rois[:,1:5],gt_rois[:,:4],label)
+    #
+    # label = label.expand(1,128)
+    # rois = rois.expand(1,128,5)
+    # gt_rois = gt_rois.expand(1,128,5)
+    bbox_target_data = compute_targets_pytorch(rois[:,:, 1:5], gt_rois[:,:,:4])
+    # print(bbox_target_data[0][1])
+    bbox_targets, bbox_inside_weights = get_bbox_regression_labels_pytorch(bbox_target_data, label, num_classes=2)
+    # #
+    # print('=========')
+    # print(bbox_targets.size())
+    # print(bbox_inside_weights.size())
+    # print(bbox_targets)
 
-    all_rois = torch.from_numpy(all_rois)
-    gt_boxes = torch.from_numpy(gt_boxes)
-    # all_rois,gt_boxes = all_rois.cuda(),gt_boxes.cuda()
-    label,rois,bbox_targets, bbox_inside_weights = sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_classes)
+    bbox_outside_weights = (bbox_inside_weights > 0).float()
+    # print(bbox_outside_weights.size())
 
-    print(label[:6])
-    print(label.shape)
+    label = label.view(-1).long()
+    bbox_targets = bbox_targets.view(-1, bbox_targets.size(2))
+    bbox_inside_weights = bbox_inside_weights.view(-1, bbox_inside_weights.size(2))
+    bbox_outside_weights = bbox_outside_weights.view(-1, bbox_outside_weights.size(2))
 
-    print(rois[:6,:])
-    print(rois.shape)
+    print(label.size())
+    print(bbox_targets.size())
+    print(bbox_inside_weights.size())
+    print(bbox_outside_weights.size())
 
-    print(bbox_targets[:6,:])
-    print(bbox_targets.shape)
-
-    print(bbox_inside_weights[:6,:])
-    print(bbox_inside_weights.shape)
+    cls_score, bbox_pred = torch.load('out_MSDN_test4.pth')
+    RCNN_loss_cls = F.cross_entropy(cls_score[:2,:], label)
+    print(RCNN_loss_cls.mean())
+    RCNN_loss_bbox = smooth_l1_loss(bbox_pred[:2], bbox_targets, bbox_inside_weights, bbox_outside_weights)
+    print(RCNN_loss_bbox.mean())

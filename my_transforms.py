@@ -43,7 +43,13 @@ class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
     def __call__(self, sample):
-        info, image, bbs, tm, gt= sample['img_info'], sample['image'], sample['bb'], sample['tm'], sample['gt']
+        info = sample['img_info']
+        image = sample['image']
+        bbs = sample['bb']
+        tm = sample['tm']
+        gt = sample['gt']
+        label = sample['label']
+        gt_roi = sample['gt_roi']
 
         # swap color axis because
         # numpy image: H x W x C
@@ -52,6 +58,7 @@ class ToTensor(object):
 
         # while bbs.shape[0] < NUM_BBS:
         #     bbs = np.concatenate((bbs,bbs))
+
         image = np.array(image)
         image = image.transpose((2, 0, 1))
 
@@ -64,6 +71,8 @@ class ToTensor(object):
                 'bb': torch.from_numpy(bbs).type('torch.FloatTensor'),
                 'tm': torch.from_numpy(tm).type('torch.FloatTensor'),
                 'gt': torch.from_numpy(gt).type('torch.FloatTensor'),
+                'gt_roi': gt_roi.type('torch.FloatTensor'),
+                'label': label.type('torch.FloatTensor')
                 }
 
 class RandomHorizontalFlip(object):
