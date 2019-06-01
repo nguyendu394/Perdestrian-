@@ -49,10 +49,10 @@ def visualizeRP(img,bbs, gt=None, fm = 'ltrb',c = 255):
                     l,t,r,b, cls = d
                     # print(l,t,r,b)
                     if fm == 'ltrb':
-                        img = cv2.rectangle(img,(l,t),(r,b),(255,0,0),1)
+                        img = cv2.rectangle(img,(l,t),(r,b),(0,0,255),1)
 
                     elif fm == 'ltwh':
-                        img = cv2.rectangle(img,(l,t),(r+l,b+t),(255,0,0),1)
+                        img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,0,255),1)
                         # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
     return img
 

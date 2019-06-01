@@ -82,9 +82,9 @@ class MyDataset(Dataset):
         sample = {'img_info':img_name,
                   'image': image,
                   'label': label,
-                  'bb': rois,
+                  'bb': rois.numpy(),
                   'tm': tm,
-                  'gt': gt_boxes_padding.cpu(),
+                  'gt': gt_boxes_padding.numpy(),
                   'gt_roi': gt_rois
                   }
 

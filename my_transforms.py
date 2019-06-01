@@ -61,9 +61,9 @@ class ToTensor(object):
 
         return {'img_info': info,
                 'image': torch.from_numpy(image).type('torch.FloatTensor'),
-                'bb': bbs.type('torch.FloatTensor'),
+                'bb': torch.from_numpy(bbs).type('torch.FloatTensor'),
                 'tm': torch.from_numpy(tm).type('torch.FloatTensor'),
-                'gt': gt.type('torch.FloatTensor'),
+                'gt': torch.from_numpy(gt).type('torch.FloatTensor'),
                 }
 
 class RandomHorizontalFlip(object):
@@ -88,7 +88,7 @@ class RandomHorizontalFlip(object):
         #     sample['image'] = TF.hflip(img)
         #     sample['tm'] = TF.hflip(ther)
         if random.random() < self.p:
-            sample['image'], sample['bb'],  sample['gt'] = flipBoundingBox(torch.from_numpy(sample['image']),sample['bb'], sample['gt'])
+            sample['image'], sample['bb'],  sample['gt'] = flipBoundingBox(sample['image'],sample['bb'], sample['gt'])
             sample['tm'] = sample['tm'][:,::-1]
 
         return sample

@@ -9,7 +9,7 @@ from RRN import MyRRN
 import torchvision.ops.roi_pool as ROIPool
 from torchvision.ops import nms
 
-def getDataLoader(bz=1):
+def getDataLoader(bz=1,p=0.5,trans=True):
     '''
         input: id: the index of image in dataset (optional)
                bz: batch size
@@ -20,10 +20,13 @@ def getDataLoader(bz=1):
     ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
     IMGS_CSV = 'mydata/imgs_train.csv'
     ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
-    full_transform=transforms.Compose([RandomHorizontalFlip(),
+    full_transform=transforms.Compose([RandomHorizontalFlip(p),
                                        ToTensor(),
                                        my_normalize()])
                                   # Normalize(rgb_mean,rgb_std)])
+    if trans is False:
+        full_transform = None
+
     device = torch.device("cuda:0")
     params = {'batch_size':bz,
               'shuffle':True,
@@ -219,7 +222,7 @@ def testNMS(bbs):
 def main():
     pre = 'models/model24/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'
 
-    dataloader = getDataLoader()
+    dataloader = getDataLoader(p=5)
     dataiter = iter(dataloader)
     sample = dataiter.next()
     testDataset(sample)
