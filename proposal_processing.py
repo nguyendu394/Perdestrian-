@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from config import cfg
 
 def getGTboxesPadding(gt_boxes,MAX_GTS):
     gt_boxes_padding = np.zeros((MAX_GTS, 5),dtype=np.float)
@@ -76,7 +77,7 @@ def bbox_overlaps(anchors, gt_boxes):
 
     return overlaps
 
-def bbox_transform(ex_rois, gt_rois):
+# def bbox_transform(ex_rois, gt_rois):
     """
     computes the distance from ground-truth boxes to the given boxes, normed by their size
     :param ex_rois: n * 4 numpy array, given boxes
@@ -106,7 +107,7 @@ def bbox_transform(ex_rois, gt_rois):
         (targets_dx, targets_dy, targets_dw, targets_dh)).transpose()
     return targets
 
-def bbox_transform_tensor(ex_rois, gt_rois):
+# def bbox_transform_tensor(ex_rois, gt_rois):
     ex_widths = ex_rois[:, 2] - ex_rois[:, 0] + 1.0
     ex_heights = ex_rois[:, 3] - ex_rois[:, 1] + 1.0
     ex_ctr_x = ex_rois[:, 0] + 0.5 * ex_widths
@@ -168,7 +169,7 @@ def bbox_transform_batch(ex_rois, gt_rois):
 
     return targets
 
-def compute_targets(ex_rois, gt_rois, labels):
+# def compute_targets(ex_rois, gt_rois, labels):
     """Compute bounding-box regression targets for an image."""
 
     assert ex_rois.shape[0] == gt_rois.shape[0]
@@ -192,9 +193,9 @@ def compute_targets_pytorch(ex_rois, gt_rois):
     assert ex_rois.size(2) == 4
     assert gt_rois.size(2) == 4
 
-    BBOX_NORMALIZE_TARGETS_PRECOMPUTED = True
-    BBOX_NORMALIZE_MEANS = torch.FloatTensor((0.0, 0.0, 0.0, 0.0))
-    BBOX_NORMALIZE_STDS = torch.FloatTensor((0.1, 0.1, 0.2, 0.2))
+    BBOX_NORMALIZE_TARGETS_PRECOMPUTED = cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED
+    BBOX_NORMALIZE_MEANS = torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS)
+    BBOX_NORMALIZE_STDS = torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS)
 
     batch_size = ex_rois.size(0)
     rois_per_image = ex_rois.size(1)
@@ -207,7 +208,7 @@ def compute_targets_pytorch(ex_rois, gt_rois):
 
     return targets
 
-def _get_bbox_regression_labels(bbox_target_data, num_classes):
+# def _get_bbox_regression_labels(bbox_target_data, num_classes):
     """Bounding-box regression targets (bbox_target_data) are stored in a
     compact form N x (class, tx, ty, tw, th)
     This function expands those targets into the 4-of-4*K representation used
@@ -239,7 +240,7 @@ def get_bbox_regression_labels_pytorch(bbox_target_data, labels_batch, num_class
         bbox_inside_weights (ndarray): b x N x 4K blob of loss weights
     """
 
-    BBOX_INSIDE_WEIGHTS = torch.FloatTensor((1.0,1.0,1.0,1.0))
+    BBOX_INSIDE_WEIGHTS = torch.FloatTensor(cfg.TRAIN.BBOX_INSIDE_WEIGHTS)
     batch_size = labels_batch.size(0)
     rois_per_image = labels_batch.size(1)
     clss = labels_batch
@@ -258,7 +259,7 @@ def get_bbox_regression_labels_pytorch(bbox_target_data, labels_batch, num_class
 
     return bbox_targets, bbox_inside_weights
 
-def sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_classes):
+# def sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_classes):
     """Generate a random sample of RoIs comprising foreground and background
     examples.
     """
@@ -314,6 +315,7 @@ def sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_class
     # bbox_inside_weights <- (1 x H x W x A, K x 4)
     # bbox_targets, bbox_inside_weights = _get_bbox_regression_labels(bbox_target_data, num_classes=2)
     return labels, rois, gt_rois
+
 def sample_rois_tensor(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_classes):
     """Generate a random sample of RoIs comprising foreground and background
     examples.
@@ -342,7 +344,7 @@ def sample_rois_tensor(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, nu
 
     # Select foreground RoIs as those with >= FG_THRESH overlap
     # fg_inds = np.where(max_overlaps >= 0.5)[0]
-    fg_inds = (max_overlaps >= 0.5).nonzero().view(-1)
+    fg_inds = (max_overlaps >= cfg.TRAIN.FG_THRESH).nonzero().view(-1)
     # print('fg_inds')
     # print(fg_inds)
     #Return the sorted, unique values in ar1 that are not in ar2.
@@ -360,7 +362,7 @@ def sample_rois_tensor(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, nu
     # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
     # bg_inds = np.where((max_overlaps < 0.5) &
     #                    (max_overlaps >= 0))[0]
-    bg_inds = (max_overlaps < 0.5).nonzero().view(-1)
+    bg_inds = (max_overlaps < cfg.TRAIN.BG_THRESH_HI).nonzero().view(-1)
 
 
     # bg_inds = np.setdiff1d(bg_inds, ignore_inds)

@@ -15,11 +15,11 @@ import torchvision.ops.roi_pool as ROIPool
 import vgg, cv2, time
 from mydataset import MyDataset
 from image_processing import resizeThermal
+from config import cfg
 
 # from image_processing import showTensor
 
-rgb_mean = (0.4914, 0.4822, 0.4465)
-rgb_std = (0.2023, 0.1994, 0.2010)
+
 
 raw_vgg16 = vgg.vgg16(pretrained=True)
 
@@ -42,20 +42,20 @@ class MyRRN(nn.Module):
         return x
 
 def train():
-    THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
-    ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
-    IMGS_CSV = 'mydata/imgs_train.csv'
-    ROIS_CSV = 'mydata/rois_trainKaist_thr70_1.csv'
+    # THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
+    # ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
+    # IMGS_CSV = 'mydata/imgs_train.csv'
+    # ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
 
-    params = {'batch_size': 6,
-          'shuffle': True,
-          'num_workers': 12}
+    params = {'batch_size': cfg.TRAIN.BATCH_SIZE,
+          'shuffle': cfg.TRAIN.SHUFFLE,
+          'num_workers': cfg.NUM_WORKERS}
     print(params)
-    max_epoch = 10
+    max_epoch = cfg.TRAIN.MAX_EPOCH
     print('max_epoch',max_epoch)
-    LR = 1e-6 #learning rate
+    LR = cfg.TRAIN.LEARNING_RATE #learning rate
     print('learning_rate',LR)
-    MT = 0.9 #momentum
+    MT = cfg.TRAIN.MOMENTUM
 
     device = torch.device("cuda:0")
     # cudnn.benchmark = True
@@ -65,8 +65,8 @@ def train():
                                        my_normalize()])
                                   # Normalize(rgb_mean,rgb_std)])
 
-    my_dataset = MyDataset(imgs_csv=IMGS_CSV,rois_csv=ROIS_CSV,
-    root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = full_transform)
+    my_dataset = MyDataset(imgs_csv=cfg.TRAIN.IMGS_CSV,rois_csv=cfg.TRAIN.ROIS_CSV,
+    root_dir=cfg.TRAIN.ROOT_DIR, ther_path=cfg.TRAIN.THERMAL_PATH,transform = full_transform)
 
     dataloader = DataLoader(my_dataset, **params)
 
@@ -135,6 +135,7 @@ def train():
 
 
 def test():
+    print('TESTING RRN ...')
     TEST_THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test_tm/'
     TEST_ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test'
     IMGS_CSV = 'mydata/imgs_test.csv'
@@ -149,8 +150,8 @@ def test():
                                        ToTensor(),])
                                   # Normalize(rgb_mean,rgb_std)])
 
-    my_dataset = MyDataset(imgs_csv=IMGS_CSV,rois_csv=ROIS_CSV,
-    root_dir=TEST_ROOT_DIR, ther_path=TEST_THERMAL_PATH,transform = full_transform)
+    my_dataset = MyDataset(imgs_csv=cfg.TRAIN.IMGS_CSV,rois_csv=cfg.TRAIN.ROIS_CSV,
+    root_dir=cfg.TRAIN.TEST_ROOT_DIR, ther_path=cfg.TRAIN.TEST_THERMAL_PATH,transform = full_transform)
     print(my_dataset.__len__())
     dataloader = DataLoader(my_dataset, **params)
 

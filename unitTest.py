@@ -3,7 +3,7 @@ import torch
 from torchvision import transforms
 from my_transforms import *
 from torch.utils.data import Dataset, DataLoader
-from mydataset import MyDataset, getDataLoader
+from mydataset import MyDataset, getSampleDataset
 from image_processing import convertTensor2Img, visualizeRP,resizeThermal
 from RRN import MyRRN
 import torchvision.ops.roi_pool as ROIPool
@@ -192,10 +192,7 @@ def testNMS(bbs):
 
 def main():
     pre = 'models/model24/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'
-
-    dataloader = getDataLoader(bz=1)
-    dataiter = iter(dataloader)
-    sample = dataiter.next()
+    sample = getSampleDataset(bz=1)
     testDataset(sample)
     # testROIpool(sample)
     # testResizeThermal(sample)

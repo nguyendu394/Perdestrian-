@@ -68,7 +68,7 @@ def createImgsFilesName(path,name_file):
             f.write(name+'\n')
     print('Done!')
 
-def convertRoisACF2CSV(path,new,isNMS=False):
+def convertRoisACF2CSV(path,new):
     '''
         Convert the file of ACF into CSV files
         input: path:  of txt file
@@ -87,10 +87,7 @@ def convertRoisACF2CSV(path,new,isNMS=False):
             t = max(float(t),0)
             r = max(float(r),0)
             b = max(float(b),0)
-            if isNMS:
-                f.write('{},{},{},{},{},{}\n'.format(id,l,t,r,b,s))
-            else:
-                f.write('{},{},{},{},{}\n'.format(id,l,t,r,b))
+            f.write('{},{},{},{},{},{}\n'.format(id,l,t,r,b,s))
 
     print('Done!')
 
@@ -177,10 +174,10 @@ def visualizeErrorLoss(true_txt, false_txt=None):
 
 def main():
     # img = cv2.imread('I01793.jpg')
-    bbs_txt = '../ngoc/toolbox/detector/models/Dets_TrainKaist_Thr70.txt'
-    bbs_csv = 'mydata/rois_trainKaist_thr70_MSDN.csv'
+    bbs_txt = '../ngoc/toolbox/detector/models/Dets_TestK_All_with_Kaist_Thr70.txt'
+    bbs_csv = 'mydata/rois_testKaist_thr70_MSDN.csv'
 
-    convertRoisACF2CSV(bbs_txt, bbs_csv,isNMS=True)
+    convertRoisACF2CSV(bbs_txt, bbs_csv)
 
 def flipBoundingBox(img,bboxes,gts):
     img_center = np.array(img.shape[:2])[::-1]/2
@@ -203,8 +200,8 @@ def flipBoundingBox(img,bboxes,gts):
 
 if __name__ == '__main__':
     # createImgsFilesName('/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test', 'mydata/imgs_test.txt')
-    # main()
+    main()
     # print('./models/model14/log14.txt')
-    true_txt = './models/MSDN/model1/log1.txt'
+    # true_txt = './models/MSDN/model1/log1.txt'
     # # test_txt = './test2_model21_epoch7.txt'
-    visualizeErrorLoss(true_txt)
+    # visualizeErrorLoss(true_txt)
