@@ -116,7 +116,7 @@ def train():
     print(params)
     max_epoch = 5
     print('max_epoch',max_epoch)
-    LR = 1e-3 #learning rate
+    LR = 1e-4 #learning rate
     print('learning_rate',LR)
     MT = 0.9 #momentum
 
@@ -129,6 +129,7 @@ def train():
 
     MSDN_net = MyMSDN()
     MSDN_net.to(device)
+    MSDN_net.load_state_dict(torch.load('models/MSDN/model1/model1_lr_1e-3_bz_6_NBS_128_norm_epoch_4.pth'))
 
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT)
@@ -186,7 +187,7 @@ def train():
                     f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(MSDN_net.state_dict(), 'models/MSDN/model1/model1_lr_1e-3_bz_6_NBS_128_norm_epoch_{}.pth'.format(epoch))
+        torch.save(MSDN_net.state_dict(), 'models/MSDN/model1/model1_lr_1e-4_bz_2_NBS_128_norm_epoch_{}.pth'.format(epoch))
     print('Huấn luyện xong')
 
 if __name__ == '__main__':

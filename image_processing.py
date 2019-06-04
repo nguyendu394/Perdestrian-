@@ -171,8 +171,8 @@ def visualizeErrorLoss(true_txt, false_txt=None):
 
     plt.plot(t_iter[500:], t_val[500:], color='orange')
     plt.xlabel('iter')
-    plt.ylabel('L2 loss');
-    plt.title('error loss')
+    plt.ylabel('multi -loss');
+    plt.title(' MSDN')
     plt.show()
 
 def main():
@@ -205,6 +205,6 @@ if __name__ == '__main__':
     # createImgsFilesName('/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test', 'mydata/imgs_test.txt')
     # main()
     # print('./models/model14/log14.txt')
-    true_txt = './models/model24/log24.txt'
+    true_txt = './models/MSDN/model1/log1.txt'
     # # test_txt = './test2_model21_epoch7.txt'
     visualizeErrorLoss(true_txt)
