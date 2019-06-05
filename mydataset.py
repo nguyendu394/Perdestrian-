@@ -77,7 +77,10 @@ class MyDataset(Dataset):
         all_rois = getAllrois(bbs[:,:-1], gt_boxes)
         all_rois = torch.from_numpy(all_rois)
         #padding ground-truth
-        gt_boxes_padding = getGTboxesPadding(gt_boxes,cfg.TRAIN.MAX_GTS)
+        if self.train:
+            gt_boxes_padding = getGTboxesPadding(gt_boxes,cfg.TRAIN.MAX_GTS)
+        else:
+            gt_boxes_padding = getGTboxesPadding(gt_boxes,cfg.TEST.MAX_GTS)
         gt_boxes_padding = torch.from_numpy(gt_boxes_padding)
         # print('Size of all ROIS', all_rois.size())
 
@@ -101,7 +104,7 @@ class MyDataset(Dataset):
 
         return sample
 
-def getSampleDataset(id = None,bz=1,p=0.5,trans=True):
+def getSampleDataset(id = None,bz=1,p=0.5,trans=True,train=True):
     '''
         input: id: the index of image in dataset (optional)
                bz: batch size
@@ -125,8 +128,12 @@ def getSampleDataset(id = None,bz=1,p=0.5,trans=True):
               'num_workers': cfg.TRAIN.NUM_WORKERS}
     print(params)
 
-    my_dataset = MyDataset(imgs_csv=cfg.TRAIN.IMGS_CSV,rois_csv=cfg.TRAIN.ROIS_CSV,
-    root_dir=cfg.TRAIN.ROOT_DIR, ther_path=cfg.TRAIN.THERMAL_PATH,transform = full_transform)
+    if train:
+        my_dataset = MyDataset(imgs_csv=cfg.TRAIN.IMGS_CSV,rois_csv=cfg.TRAIN.ROIS_CSV,
+        root_dir=cfg.TRAIN.ROOT_DIR, ther_path=cfg.TRAIN.THERMAL_PATH,transform = full_transform,train=train)
+    else:
+        my_dataset = MyDataset(imgs_csv=cfg.TEST.IMGS_CSV,rois_csv=cfg.TEST.ROIS_CSV,
+        root_dir=cfg.TEST.ROOT_DIR, ther_path=cfg.TEST.THERMAL_PATH,transform = full_transform,train=train)
     print(my_dataset.__len__())
     dataloader = DataLoader(my_dataset, **params)
 

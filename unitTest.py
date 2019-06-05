@@ -192,18 +192,16 @@ def testNMS(bbs):
 
 def main():
     pre = 'models/model24/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'
-    sample = getSampleDataset(bz=1)
+    sample = getSampleDataset(id = 2027,train=True,bz=1)
     testDataset(sample)
     # testROIpool(sample)
     # testResizeThermal(sample)
     # testRRN_Pretrain(sample, pre)
 if __name__ == '__main__':
-    # main()
-    a = torch.randn(10)
-    b = torch.Tensor([1,2,5,1,3]).long()
-    print(a)
-    print(b)
-    print(a[b])
+    main()
+    # cls_dets = torch.Tensor([[],[],[],[],[]]).permute(1,0)
+    # print(cls_dets)
+    # print(cls_dets.numel())
     #
     #
     # print(a)

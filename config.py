@@ -98,6 +98,9 @@ __C.TEST.ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
 # Test using bounding-box regressors
 __C.TEST.BBOX_REG = True
 
+#maximum rois in ground-truth test
+__C.TEST.MAX_GTS = 14
+
 #thres
 __C.TEST.THRESS = 0.05
 

@@ -290,7 +290,7 @@ def test():
         # print(pred_boxes.shape)
 
         inds = torch.nonzero(scores[:,1]>cfg.TEST.THRESS).view(-1)
-        print(inds)
+        # print(inds)
         if inds.numel() > 0:
             # print(scores)
             cls_scores = scores[:,1][inds]
@@ -303,28 +303,23 @@ def test():
             # print(cls_dets)
             keep = nms(cls_boxes[order, :], cls_scores[order], cfg.TEST.NMS)
             cls_dets = cls_dets[keep.view(-1).long()]
-            print(cls_dets)
+            # print(cls_dets)
         else:
             cls_dets = torch.Tensor([[],[],[],[],[]]).permute(1,0)
 
-        print(sample['gt'])
-
-        img = showBbs(sam, cls_dets,sample['gt'])
-        cv2.imshow('AA',img)
-        cv2.waitKey()
-        cv2.destroyAllWindows()
-
-        input()
-        # running_loss += loss.item()
-        # if i % 10 == 9:    # In mỗi 2000 mini-batches.
-        #     text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
-        #     print(text)
-        #     with open('models/MSDN/model1/log1.txt','a') as f:
-        #         f.write(text + '\n')
-        #     running_loss = 0.0
-        #     st = time.time()
-        # torch.save(MSDN_net.state_dict(), 'models/MSDN/model1/model1_lr_1e-4_bz_2_NBS_128_norm_epoch_{}.pth'.format(epoch))
-    # print('Huấn luyện xong')
+        # print(sample['gt'])
+        #
+        # img = showBbs(sam, cls_dets,sample['gt'])
+        # cv2.imshow('AA',img)
+        # cv2.waitKey()
+        # cv2.destroyAllWindows()
+        print('writing image {}'.format(i+1))
+        if cls_dets.numel() > 0:
+            bbs = cls_dets.cpu().detach().numpy()
+            with open('mymodel/MSDN/test/test1_premodel3_lr3.txt','a') as f:
+                for bb in bbs:
+                    l,t,r,b,s = bb
+                    f.write('{id},{l:9.3f},{t:9.3f},{w:9.3f},{h:9.3f}\n'.format(id=i+1,l=l,t=t,w=r-l,h=b-t))
 
 
 if __name__ == '__main__':

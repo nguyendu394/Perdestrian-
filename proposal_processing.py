@@ -9,6 +9,7 @@ def getGTboxesPadding(gt_boxes,MAX_GTS):
     gt_boxes_padding = np.zeros((MAX_GTS, 5),dtype=np.float)
     if gt_boxes:
         num_gts = len(gt_boxes)
+        print('num',num_gts)
         gt_boxes = np.asarray(gt_boxes,dtype=np.float)
 
         # gt_boxes_padding = torch.FloatTensor(self.MAX_GTS, 5).zero_()
