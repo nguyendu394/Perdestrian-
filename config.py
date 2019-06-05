@@ -15,6 +15,8 @@ __C.rgb_std = (0.2023, 0.1994, 0.2010)
 
 #Number of classes (include background)
 __C.NUM_CLASSES = 2
+__C.IMAGE_WIDTH = 640
+__C.IMAGE_HEIGHT = 512
 
 #
 # Training options
@@ -34,7 +36,7 @@ __C.TRAIN.IMGS_CSV = 'mydata/imgs_train.csv'
 __C.TRAIN.ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
 
 # Initial learning rate
-__C.TRAIN.LEARNING_RATE = 1e-3
+__C.TRAIN.LEARNING_RATE = 1e-4
 
 # Momentum
 __C.TRAIN.MOMENTUM = 0.9
@@ -43,7 +45,7 @@ __C.TRAIN.MOMENTUM = 0.9
 # __C.TRAIN.WEIGHT_DECAY = 0.0005
 
 # Minibatch size (number of regions of interest [ROIs])
-__C.TRAIN.BATCH_SIZE = 2
+__C.TRAIN.BATCH_SIZE = 1
 
 #shuffle dataset
 __C.TRAIN.SHUFFLE = True
@@ -52,7 +54,7 @@ __C.TRAIN.SHUFFLE = True
 __C.TRAIN.NUM_WORKERS = 24
 
 #maximum epoch
-__C.TRAIN.MAX_EPOCH = 10
+__C.TRAIN.MAX_EPOCH = 5
 
 #maximum rois in ground-truth
 __C.TRAIN.MAX_GTS = 9
@@ -79,3 +81,26 @@ __C.TRAIN.BBOX_NORMALIZE_STDS = (0.1, 0.1, 0.2, 0.2)
 
 # Deprecated (inside weights)
 __C.TRAIN.BBOX_INSIDE_WEIGHTS = (1.0, 1.0, 1.0, 1.0)
+
+
+#
+# Testing options
+#
+__C.TEST = edict()
+
+# Scale to use during testing (can NOT list multiple scales)
+# The scale is the pixel size of an image's shortest side
+__C.TEST.THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test_tm/'
+__C.TEST.ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test'
+__C.TEST.IMGS_CSV = 'mydata/imgs_test.csv'
+__C.TEST.ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
+
+# Test using bounding-box regressors
+__C.TEST.BBOX_REG = True
+
+#thres
+__C.TEST.THRESS = 0.05
+
+# Overlap threshold used for non-maximum suppression (suppress boxes with
+# IoU >= this threshold)
+__C.TEST.NMS = 0.3

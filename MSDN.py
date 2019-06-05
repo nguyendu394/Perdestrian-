@@ -12,11 +12,11 @@ import torchvision.ops.roi_pool as ROIPool
 from RRN import MyRRN
 import vgg, cv2, time
 from mydataset import MyDataset
-from torchvision.ops import box_iou
+from torchvision.ops import box_iou, nms
 from my_transforms import *
-from proposal_processing import compute_targets_pytorch, smooth_l1_loss, get_bbox_regression_labels_pytorch
+from proposal_processing import compute_targets_pytorch, smooth_l1_loss, get_bbox_regression_labels_pytorch, bbox_transform_inv, clip_boxes
 from config import cfg
-
+from image_processing import showBbs
 raw_vgg16 = vgg.vgg16(pretrained=True)
 
 raw_RRN = MyRRN()
@@ -79,10 +79,10 @@ class MyMSDN(nn.Module):
         x = self.FC(x)
 
         cls_score = self.score_fc(x)
-        cls_prob = F.softmax(cls_score)
+        # cls_prob = F.softmax(cls_score)
         bbox_pred = self.bbox_fc(x)
 
-        return cls_prob, bbox_pred
+        return cls_score, bbox_pred
 
 def createTarget(label,bbb,gt_rois):
 
@@ -128,7 +128,7 @@ def train():
 
     MSDN_net = MyMSDN()
     MSDN_net.to(device)
-    MSDN_net.load_state_dict(torch.load('models/MSDN/model1/model1_lr_1e-3_bz_6_NBS_128_norm_epoch_4.pth'))
+    MSDN_net.load_state_dict(torch.load('models/MSDN/model3/model3_lr_1e-3_bz_2_NBS_128_norm_epoch_4.pth'))
 
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT)
@@ -141,7 +141,11 @@ def train():
             label = sample['label']
             bbb = sample['bb']
             gt_rois = sample['gt_roi']
-
+            # print(sample['gt'])
+            # print(gt_rois)
+            # print(gt_rois.size())
+            #
+            # exit()
             # label,bbb,gt_rois = label.to(device),bbb.to(device),gt_rois.to(device)
 
             bbox_label,bbox_targets,bbox_inside_weights,bbox_outside_weights = createTarget(label,bbb,gt_rois)
@@ -182,29 +186,28 @@ def train():
             if i % 10 == 9:    # In mỗi 2000 mini-batches.
                 text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
                 print(text)
-                with open('models/MSDN/model1/log1.txt','a') as f:
+                with open('models/MSDN/model3/log3.txt','a') as f:
                     f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(MSDN_net.state_dict(), 'models/MSDN/model1/model1_lr_1e-4_bz_2_NBS_128_norm_epoch_{}.pth'.format(epoch))
+        torch.save(MSDN_net.state_dict(), 'models/MSDN/model3/model3_lr_1e-4_bz_2_NBS_128_norm_epoch_{}.pth'.format(epoch))
     print('Huấn luyện xong')
 
 def test():
     print('TESTING MSDN...')
-
-    THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test_tm/'
-    ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test'
-    IMGS_CSV = 'mydata/imgs_test.csv'
-    ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
-    full_transform=transforms.Compose([RandomHorizontalFlip(),
-                                       ToTensor(),
+    #
+    # THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test_tm/'
+    # ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test'
+    # IMGS_CSV = 'mydata/imgs_test.csv'
+    # ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
+    full_transform=transforms.Compose([ToTensor(),
                                        my_normalize()])
                                   # Normalize(rgb_mean,rgb_std)])
 
     device = torch.device("cuda:0")
-    params = {'batch_size':2,
-              'shuffle':True,
-              'num_workers':24}
+    params = {'batch_size': 1,
+              'shuffle':False,
+              'num_workers':cfg.TRAIN.NUM_WORKERS}
     print(params)
     # max_epoch = 5
     # print('max_epoch',max_epoch)
@@ -212,8 +215,8 @@ def test():
     # print('learning_rate',LR)
     # MT = 0.9 #momentum
 
-    my_dataset = MyDataset(imgs_csv=IMGS_CSV,rois_csv=ROIS_CSV,
-    root_dir=ROOT_DIR, ther_path=THERMAL_PATH,transform = full_transform)
+    my_dataset = MyDataset(imgs_csv=cfg.TEST.IMGS_CSV,rois_csv=cfg.TEST.ROIS_CSV,
+    root_dir=cfg.TEST.ROOT_DIR, ther_path=cfg.TEST.THERMAL_PATH,transform = full_transform,train=False)
     print(my_dataset.__len__())
     dataloader = DataLoader(my_dataset, **params)
     # print(list(aa.front_subnetB.parameters())[2])
@@ -221,7 +224,8 @@ def test():
 
     MSDN_net = MyMSDN()
     MSDN_net.to(device)
-    MSDN_net.load_state_dict(torch.load('mymodel/MSDN/model1_lr_1e-4_bz_2_NBS_128_norm_epoch_4.pth'))
+
+    MSDN_net.load_state_dict(torch.load('models/MSDN/model3/model3_lr_1e-3_bz_2_NBS_128_norm_epoch_4.pth'))
 
     # criterion = nn.MSELoss()
     # optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT)
@@ -230,7 +234,7 @@ def test():
     running_loss = 0.0
     st = time.time()
     for i, sample in enumerate(dataloader):
-
+        print(sample['img_info'])
         label = sample['label']
         bbb = sample['bb']
         gt_rois = sample['gt_roi']
@@ -241,8 +245,10 @@ def test():
 
         bbox_label,bbox_targets,bbox_inside_weights,bbox_outside_weights = bbox_label.to(device),bbox_targets.to(device),bbox_inside_weights.to(device),bbox_outside_weights.to(device)
 
-        sam = sample['image']
 
+        sam = sample['image']
+        boxes = bbb[:, :, 1:5].cuda()
+        # print('boxes of size', boxes)
         # bbb = sample['bb']
 
         num=bbb.size(1)
@@ -258,31 +264,72 @@ def test():
 
         cls_score, bbox_pred = MSDN_net(sam,bbb)
 
-        # RCNN_loss_cls = F.cross_entropy(cls_score, bbox_label)
-        # print(RCNN_loss_cls.mean())
-        # RCNN_loss_bbox = smooth_l1_loss(bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights)
-        # print(RCNN_loss_bbox.mean())
+        scores = F.softmax(cls_score).detach()
+        # print('score of size', scores.shape)
 
-        # loss = RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
-        # # print('loss at {}: '.format(i),loss.item())
-        # optimizer.zero_grad()
-        # loss.backward()
-        # optimizer.step()
+        if cfg.TEST.BBOX_REG:
+            # Apply bounding-box regression deltas
+            box_deltas = bbox_pred.detach()
+            if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
+                # Optionally normalize targets by a precomputed mean and stdev
+                box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
+                           + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+                box_deltas = box_deltas.view(1, -1, 4)
 
-        running_loss += loss.item()
-        if i % 10 == 9:    # In mỗi 2000 mini-batches.
-            text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
-            print(text)
-            with open('models/MSDN/model1/log1.txt','a') as f:
-                f.write(text + '\n')
-            running_loss = 0.0
-            st = time.time()
+            pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
+            # print(pred_boxes)
+            pred_boxes = clip_boxes(pred_boxes, 1)
+        else:
+            # Simply repeat the boxes, once for each class
+            pred_boxes = np.tile(boxes, (1, scores.shape[1]))
+
+        #clear all dimension 1
+        scores = scores.squeeze()
+        pred_boxes = pred_boxes.squeeze()
+        # print(scores.shape)
+        # print(pred_boxes.shape)
+
+        inds = torch.nonzero(scores[:,1]>cfg.TEST.THRESS).view(-1)
+        print(inds)
+        if inds.numel() > 0:
+            # print(scores)
+            cls_scores = scores[:,1][inds]
+            # print(cls_score.shape)
+            _, order = torch.sort(cls_scores, 0, True)
+            cls_boxes = pred_boxes[inds, :]
+            # print(cls_boxes.shape)
+            cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1)), 1)
+            cls_dets = cls_dets[order]
+            # print(cls_dets)
+            keep = nms(cls_boxes[order, :], cls_scores[order], cfg.TEST.NMS)
+            cls_dets = cls_dets[keep.view(-1).long()]
+            print(cls_dets)
+        else:
+            cls_dets = torch.Tensor([[],[],[],[],[]]).permute(1,0)
+
+        print(sample['gt'])
+
+        img = showBbs(sam, cls_dets,sample['gt'])
+        cv2.imshow('AA',img)
+        cv2.waitKey()
+        cv2.destroyAllWindows()
+
+        input()
+        # running_loss += loss.item()
+        # if i % 10 == 9:    # In mỗi 2000 mini-batches.
+        #     text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
+        #     print(text)
+        #     with open('models/MSDN/model1/log1.txt','a') as f:
+        #         f.write(text + '\n')
+        #     running_loss = 0.0
+        #     st = time.time()
         # torch.save(MSDN_net.state_dict(), 'models/MSDN/model1/model1_lr_1e-4_bz_2_NBS_128_norm_epoch_{}.pth'.format(epoch))
     # print('Huấn luyện xong')
 
 
 if __name__ == '__main__':
-    train()
+    # train()
+    test()
     # cls, pros = torch.load('out_MSDN_test.pth')
     # print(cls.size())
     # print(pros)

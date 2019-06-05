@@ -136,15 +136,26 @@ def resizeThermal(img,rois):
         tm_croppeds.append(np.expand_dims(tm_cropped,axis=0))
     return torch.from_numpy(np.array(tm_croppeds)).type('torch.FloatTensor')
 
-def showBbs(img, bbs):
+def showBbs(img, bbs, gt = None):
     '''
         Draw region proposal into images
         input: image(numpy)
                bbs(Tensor) nx4 (l,t,r,b)
     '''
+    img = img.cpu().detach().numpy()
+    bbs = bbs.cpu().detach().numpy()
+    gt = gt.cpu().detach().numpy()
+    gt=gt.squeeze()
+    # print(gt)
+    img = img.squeeze().transpose((1,2,0))
     for d in bbs:
-        l,t,r,b = d
+        l,t,r,b,s = d
         img = cv2.rectangle(img,(int(l),int(t)),(int(r),int(b)),(0,255,0),1)
+    if gt is not None:
+        for bb in gt:
+            # print(bb)
+            l,t,r,b,s = bb
+            img = cv2.rectangle(img,(int(l),int(t)),(int(r),int(b)),(0,0,255),1)
 
     return img
 

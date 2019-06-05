@@ -32,8 +32,9 @@ rgb_std = (0.2023, 0.1994, 0.2010)
 
 class MyDataset(Dataset):
     """docstring for MyDataset."""
-    def __init__(self, imgs_csv,rois_csv, ther_path,root_dir, transform=None):
+    def __init__(self, imgs_csv,rois_csv, ther_path,root_dir, transform=None,train=True):
         super(MyDataset, self).__init__()
+        self.train = train
         self.imgs = pd.read_csv(imgs_csv)
         self.bb = pd.read_csv(rois_csv)
         self.bb.set_index('id', inplace=True)
@@ -47,8 +48,13 @@ class MyDataset(Dataset):
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir,
                                 self.imgs.iloc[idx,0])
-        gt_name = img_name.replace('images_train', 'annotations_train')
+        if self.train:
+            gt_name = img_name.replace('images_train', 'annotations_train')
+        else:
+            gt_name = img_name.replace('images_test', 'annotations_test')
+
         gt_name = gt_name.replace('jpg', 'txt')
+
 
         image = cv2.imread(img_name)
 

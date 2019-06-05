@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
 import torch
 from config import cfg
@@ -391,7 +394,6 @@ def sample_rois_tensor(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, nu
 
     return labels,rois,gt_rois
 
-
 def smooth_l1_loss(bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights, sigma=1.0, dim=[1]):
 
     sigma_2 = sigma ** 2
@@ -407,3 +409,61 @@ def smooth_l1_loss(bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_we
       loss_box = loss_box.sum(i)
     loss_box = loss_box.mean()
     return loss_box
+
+def bbox_transform_inv(boxes, deltas, batch_size):
+    widths = boxes[:, :, 2] - boxes[:, :, 0] + 1.0
+    heights = boxes[:, :, 3] - boxes[:, :, 1] + 1.0
+    ctr_x = boxes[:, :, 0] + 0.5 * widths
+    ctr_y = boxes[:, :, 1] + 0.5 * heights
+
+    dx = deltas[:, :, 0::4]
+    dy = deltas[:, :, 1::4]
+    dw = deltas[:, :, 2::4]
+    dh = deltas[:, :, 3::4]
+
+    pred_ctr_x = dx * widths.unsqueeze(2) + ctr_x.unsqueeze(2)
+    pred_ctr_y = dy * heights.unsqueeze(2) + ctr_y.unsqueeze(2)
+    pred_w = torch.exp(dw) * widths.unsqueeze(2)
+    pred_h = torch.exp(dh) * heights.unsqueeze(2)
+
+    pred_boxes = deltas.clone()
+    # x1
+    pred_boxes[:, :, 0::4] = pred_ctr_x - 0.5 * pred_w
+    # y1
+    pred_boxes[:, :, 1::4] = pred_ctr_y - 0.5 * pred_h
+    # x2
+    pred_boxes[:, :, 2::4] = pred_ctr_x + 0.5 * pred_w
+    # y2
+    pred_boxes[:, :, 3::4] = pred_ctr_y + 0.5 * pred_h
+
+    return pred_boxes
+
+def clip_boxes_batch(boxes, im_shape, batch_size):
+    """
+    Clip boxes to image boundaries.
+    """
+    num_rois = boxes.size(1)
+
+    boxes[boxes < 0] = 0
+    # batch_x = (im_shape[:,0]-1).view(batch_size, 1).expand(batch_size, num_rois)
+    # batch_y = (im_shape[:,1]-1).view(batch_size, 1).expand(batch_size, num_rois)
+
+    batch_x = im_shape[:, 1] - 1
+    batch_y = im_shape[:, 0] - 1
+
+    boxes[:,:,0][boxes[:,:,0] > batch_x] = batch_x
+    boxes[:,:,1][boxes[:,:,1] > batch_y] = batch_y
+    boxes[:,:,2][boxes[:,:,2] > batch_x] = batch_x
+    boxes[:,:,3][boxes[:,:,3] > batch_y] = batch_y
+
+    return boxes
+
+def clip_boxes(boxes, batch_size):
+
+    for i in range(batch_size):
+        boxes[i,:,0::4].clamp_(0, cfg.IMAGE_WIDTH - 1) #left
+        boxes[i,:,1::4].clamp_(0, cfg.IMAGE_HEIGHT - 1) #top
+        boxes[i,:,2::4].clamp_(0, cfg.IMAGE_WIDTH - 1) #right
+        boxes[i,:,3::4].clamp_(0, cfg.IMAGE_HEIGHT - 1) #bottom
+
+    return boxes

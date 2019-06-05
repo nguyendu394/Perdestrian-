@@ -198,9 +198,17 @@ def main():
     # testResizeThermal(sample)
     # testRRN_Pretrain(sample, pre)
 if __name__ == '__main__':
-    main()
-    # a = torch.randn(6,5)
+    # main()
+    a = torch.randn(10)
+    b = torch.Tensor([1,2,5,1,3]).long()
+    print(a)
+    print(b)
+    print(a[b])
+    #
+    #
     # print(a)
+    # print(a[1,:,0::4].clamp_(0, im_shape[i, 1]-1))
+
     # b = a.view(1,6,5)
     # print(b)
     # x = a.numpy()
