@@ -27,12 +27,8 @@ class MyRRN(nn.Module):
     def __init__(self):
         super(MyRRN, self).__init__()
         self.features = raw_vgg16.features
-        # self.roi_pool = ROIPool((7, 7), 1/16)
         self.deconv1 = nn.ConvTranspose2d(in_channels=512,out_channels=64,kernel_size=4,stride=8, padding=1)
         self.conv1 = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=3, padding=1)
-        # self.fc1 = nn.Linear( 512* 7 * 7, 4096)
-        # self.deconv2 = nn.ConvTranspose2d(in_channels=3,out_channels=64,kernel_size=4,stride=8, padding=1)
-
 
     def forward(self, x, rois):
         x = self.features(x)
@@ -42,14 +38,9 @@ class MyRRN(nn.Module):
         return x
 
 def train():
-    # THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
-    # ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
-    # IMGS_CSV = 'mydata/imgs_train.csv'
-    # ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
-
     params = {'batch_size': cfg.TRAIN.BATCH_SIZE,
           'shuffle': cfg.TRAIN.SHUFFLE,
-          'num_workers': cfg.NUM_WORKERS}
+          'num_workers': cfg.TRAIN.NUM_WORKERS}
     print(params)
     max_epoch = cfg.TRAIN.MAX_EPOCH
     print('max_epoch',max_epoch)
@@ -62,8 +53,8 @@ def train():
     # transform = ToTensor()
     full_transform=transforms.Compose([RandomHorizontalFlip(),
                                        ToTensor(),
-                                       my_normalize()])
-                                  # Normalize(rgb_mean,rgb_std)])
+                                       # my_normalize()])
+                                       Normalize(cfg.BGR_MEAN,cfg.BGR_STD)])
 
     my_dataset = MyDataset(imgs_csv=cfg.TRAIN.IMGS_CSV,rois_csv=cfg.TRAIN.ROIS_CSV,
     root_dir=cfg.TRAIN.ROOT_DIR, ther_path=cfg.TRAIN.THERMAL_PATH,transform = full_transform)
@@ -73,8 +64,7 @@ def train():
     RRN_net = MyRRN()
     RRN_net.to(device)
 
-
-    RRN_net.load_state_dict(torch.load('models/model24/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'))
+    RRN_net.load_state_dict(torch.load('models/RRN/model24/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'))
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,RRN_net.parameters()), lr=LR, momentum=MT)
 
@@ -125,11 +115,11 @@ def train():
             if i % 10 == 9:    # In mỗi 2000 mini-batches.
                 text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
                 print(text)
-                with open('models/model26/log26.txt','a') as f:
+                with open('models/RRN/model27/log27.txt','a') as f:
                     f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(RRN_net.state_dict(), 'models/model26/model26_lr_1e-6_bz_6_NBS_128_norm_epoch_{}.pth'.format(epoch))
+        torch.save(RRN_net.state_dict(), 'models/RRN/model27/model27_lr_1e-6_bz_6_NBS_128_norm_epoch_{}.pth'.format(epoch))
     print('Huấn luyện xong')
 
 
@@ -168,6 +158,8 @@ def test():
         # Lấy dữ liệu
         sam = sample['image']
         bbb = sample['bb']
+        print(bbb.size())
+        exit()
         num=bbb.size(1)
         bbb=bbb.view(-1, 5)
         #reset id

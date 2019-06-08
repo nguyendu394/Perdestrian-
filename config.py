@@ -10,8 +10,10 @@ __C = edict()
 cfg = __C
 
 #normalize mean std (ImageNet)
-__C.rgb_mean = (0.4914, 0.4822, 0.4465)
-__C.rgb_std = (0.2023, 0.1994, 0.2010)
+# __C.rgb_mean = (0.4914, 0.4822, 0.4465)
+# __C.rgb_std = (0.2023, 0.1994, 0.2010)
+__C.BGR_MEAN = (0.406, 0.456, 0.485)
+__C.BGR_STD = (0.225, 0.224, 0.229)
 
 #Number of classes (include background)
 __C.NUM_CLASSES = 2
@@ -36,7 +38,7 @@ __C.TRAIN.IMGS_CSV = 'mydata/imgs_train.csv'
 __C.TRAIN.ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
 
 # Initial learning rate
-__C.TRAIN.LEARNING_RATE = 1e-4
+__C.TRAIN.LEARNING_RATE = 1e-6
 
 # Momentum
 __C.TRAIN.MOMENTUM = 0.9
@@ -45,13 +47,17 @@ __C.TRAIN.MOMENTUM = 0.9
 # __C.TRAIN.WEIGHT_DECAY = 0.0005
 
 # Minibatch size (number of regions of interest [ROIs])
-__C.TRAIN.BATCH_SIZE = 1
+__C.TRAIN.BATCH_SIZE = 4
 
 #shuffle dataset
 __C.TRAIN.SHUFFLE = True
 
 #number CPU used
 __C.TRAIN.NUM_WORKERS = 24
+
+#unfeeze RRN parameters
+__C.TRAIN.FREEZE_RRN = True
+
 
 #maximum epoch
 __C.TRAIN.MAX_EPOCH = 5
@@ -101,8 +107,13 @@ __C.TEST.BBOX_REG = True
 #maximum rois in ground-truth test
 __C.TEST.MAX_GTS = 14
 
-#thres
+#thres scrore
 __C.TEST.THRESS = 0.05
+
+#thres height
+__C.TEST.MIN_HEIGHT = 45
+__C.TEST.MAX_HEIGHT = 115
+
 
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)

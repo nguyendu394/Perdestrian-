@@ -129,8 +129,9 @@ class Normalize(object):
         Returns:
             Tensor: Normalized Tensor image.
         """
-        sample['image'] = TF.normalize(sample['image'], self.mean, self.std, self.inplace)
-        sample['tm'] = TF.normalize(sample['tm'], self.mean, self.std, self.inplace)
+        normimg = sample['image']/255.
+        sample['image'] = TF.normalize(normimg, self.mean, self.std, self.inplace)
+        # sample['tm'] = TF.normalize(sample['tm'], self.mean, self.std, self.inplace)
 
         return sample
 

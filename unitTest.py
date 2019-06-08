@@ -150,8 +150,9 @@ def  testROIpool(sample):
     device = torch.device("cuda:0")
     sam = sample['image']
     bbs = sample['bb']
-    bz = bbb.size(0)
-    num = bbb.size(1)
+    bz = bbs.size(0)
+    num = bbs.size(1)
+
     bbs=bbs.view(-1, 5)
     ind = torch.arange(bz,requires_grad=False).view(-1,1)
     ind = ind.repeat(1,num).view(-1,1)
@@ -192,8 +193,11 @@ def testNMS(bbs):
 
 def main():
     pre = 'models/model24/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'
-    sample = getSampleDataset(id = 2027,train=True,bz=1)
-    testDataset(sample)
+    # sample = getSampleDataset(id = 2027,train=True,bz=1)
+    sample = getSampleDataset(train=True,bz=1)
+
+    print(sample['bb'])
+    # testDataset(sample)
     # testROIpool(sample)
     # testResizeThermal(sample)
     # testRRN_Pretrain(sample, pre)
@@ -206,7 +210,9 @@ if __name__ == '__main__':
     #
     # print(a)
     # print(a[1,:,0::4].clamp_(0, im_shape[i, 1]-1))
-
+    # a = torch.randn(2,3,4)
+    # print(a)
+    # print(a.reshape(-1))
     # b = a.view(1,6,5)
     # print(b)
     # x = a.numpy()

@@ -25,11 +25,6 @@ import torch.nn.functional as F
 import warnings
 warnings.filterwarnings("ignore")
 
-
-rgb_mean = (0.4914, 0.4822, 0.4465)
-rgb_std = (0.2023, 0.1994, 0.2010)
- # mean=(0,485, 0,456, 0,406) and std=(0,229, 0,224, 0,225)
-
 class MyDataset(Dataset):
     """docstring for MyDataset."""
     def __init__(self, imgs_csv,rois_csv, ther_path,root_dir, transform=None,train=True):
@@ -65,6 +60,7 @@ class MyDataset(Dataset):
         tm = cv2.imread(os.path.join(self.ther_path,self.imgs.iloc[idx,0].replace('visible','lwir')),0)
 
         #create ground-truth
+
         gt_boxes = []
         with open(gt_name,'r') as f:
             data = f.readlines()
@@ -118,7 +114,7 @@ def getSampleDataset(id = None,bz=1,p=0.5,trans=True,train=True):
     full_transform=transforms.Compose([RandomHorizontalFlip(p),
                                        ToTensor(),
                                        my_normalize()])
-                                  # Normalize(rgb_mean,rgb_std)])
+                                       # Normalize(cfg.BGR_MEAN,cfg.BGR_STD)])
     if trans is False:
         full_transform = None
 

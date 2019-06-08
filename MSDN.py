@@ -17,13 +17,18 @@ from my_transforms import *
 from proposal_processing import compute_targets_pytorch, smooth_l1_loss, get_bbox_regression_labels_pytorch, bbox_transform_inv, clip_boxes
 from config import cfg
 from image_processing import showBbs
+import argparse
 raw_vgg16 = vgg.vgg16(pretrained=True)
 
 raw_RRN = MyRRN()
-raw_RRN.load_state_dict(torch.load('models/model24/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'))
-#freeze the feature layers of RRN
-for param in raw_RRN.features.parameters():
-    param.requires_grad = False
+raw_RRN.load_state_dict(torch.load('mymodel/RRN/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'))
+if cfg.TRAIN.FREEZE_RRN:
+    print('Freeze RRN parameters')
+    #freeze the feature layers of RRN
+    for param in raw_RRN.features.parameters():
+        param.requires_grad = False
+else:
+    print('Unfreeze RRN parameters')
 
 class MyMSDN(nn.Module):
     def __init__(self):
@@ -128,7 +133,7 @@ def train():
 
     MSDN_net = MyMSDN()
     MSDN_net.to(device)
-    MSDN_net.load_state_dict(torch.load('models/MSDN/model3/model3_lr_1e-3_bz_2_NBS_128_norm_epoch_4.pth'))
+    MSDN_net.load_state_dict(torch.load('mymodel/MSDN/model4/model4_lr_1e-4_bz_2_NBS_128_norm_epoch_4.pth'))
 
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT)
@@ -186,11 +191,12 @@ def train():
             if i % 10 == 9:    # In mỗi 2000 mini-batches.
                 text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
                 print(text)
-                with open('models/MSDN/model3/log3.txt','a') as f:
+                exit()
+                with open('models/MSDN/model5/log5.txt','a') as f:
                     f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(MSDN_net.state_dict(), 'models/MSDN/model3/model3_lr_1e-4_bz_2_NBS_128_norm_epoch_{}.pth'.format(epoch))
+        torch.save(MSDN_net.state_dict(), 'models/MSDN/model5/model5_lr_1e-4_bz_2_NBS_128_norm_epoch_{}.pth'.format(epoch))
     print('Huấn luyện xong')
 
 def test():
@@ -225,7 +231,7 @@ def test():
     MSDN_net = MyMSDN()
     MSDN_net.to(device)
 
-    MSDN_net.load_state_dict(torch.load('models/MSDN/model3/model3_lr_1e-3_bz_2_NBS_128_norm_epoch_4.pth'))
+    MSDN_net.load_state_dict(torch.load('mymodel/MSDN/model5/model5_lr_1e-4_bz_2_NBS_128_norm_epoch_4.pth'))
 
     # criterion = nn.MSELoss()
     # optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT)
@@ -316,15 +322,31 @@ def test():
         print('writing image {}'.format(i+1))
         if cls_dets.numel() > 0:
             bbs = cls_dets.cpu().detach().numpy()
-            with open('mymodel/MSDN/test/test1_premodel3_lr3.txt','a') as f:
+            with open('mymodel/MSDN/test/test1_premodel5_lr4_thres5_scale.txt','a') as f:
                 for bb in bbs:
                     l,t,r,b,s = bb
-                    f.write('{id},{l:9.3f},{t:9.3f},{w:9.3f},{h:9.3f}\n'.format(id=i+1,l=l,t=t,w=r-l,h=b-t))
+                    w = r-l
+                    h = b-t
+                    if w > 0 and h >= cfg.TEST.MIN_HEIGHT and h <= cfg.TEST.MAX_HEIGHT:
+                        f.write('{id},{l:9.3f},{t:9.3f},{w:9.3f},{h:9.3f},{s:9.3f}\n'.format(id=i+1,l=l,t=t,w=w,h=h,s=s*100))
 
+def parse_args():
+    """
+        Parse input arguments
+    """
+    parser = argparse.ArgumentParser(description='Train a MSDN network')
+    parser.add_argument('--test', action='store_true')
 
+    args = parser.parse_args()
+    return args
 if __name__ == '__main__':
-    # train()
-    test()
+    args = parse_args()
+
+    if args.test:
+        test()
+    else:
+        train()
+
     # cls, pros = torch.load('out_MSDN_test.pth')
     # print(cls.size())
     # print(pros)

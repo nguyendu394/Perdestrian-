@@ -21,7 +21,7 @@ def equalizeHist(gray):
     # claheImg = cv2.equalizeHist(img)
     # gray = cv2.fastNlMeansDenoising(gray,None,4,7,21)
 
-    return gray*255
+    return gray
 
 def visualizeRP(img,bbs, gt=None, fm = 'ltrb',c = 255):
     '''
@@ -171,16 +171,23 @@ def readLogFile(path):
         val.append(float(d.split()[3]))
     return iters, val
 
-def visualizeErrorLoss(true_txt, false_txt=None):
+def visualizeErrorLoss(true_txt, false_txt=None, title=' ', ylabel=' ',xlabel='iterations', step=100):
     if false_txt:
         f_iter, f_val = readLogFile(false_txt)
         plt.plot(f_iter, f_val, color='g')
     t_iter, t_val = readLogFile(true_txt)
+    t_iter = np.array(t_iter)
+    t_val = np.array(t_val)
 
-    plt.plot(t_iter[500:], t_val[500:], color='orange')
-    plt.xlabel('iter')
-    plt.ylabel('multi -loss');
-    plt.title(' MSDN')
+    t_iter = np.mean(t_iter[:(len(t_iter)//step)*step].reshape(-1, step), axis=1)
+    # print(t_iter[:10])
+    t_val = np.mean(t_val[:(len(t_val)//step)*step].reshape(-1, step), axis=1)
+    # print(t_val[:10])
+    # exit()
+    plt.plot(t_iter, t_val, color='orange')
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel);
+    plt.title(title)
     plt.show()
 
 def main():
@@ -211,8 +218,14 @@ def flipBoundingBox(img,bboxes,gts):
 
 if __name__ == '__main__':
     # createImgsFilesName('/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test', 'mydata/imgs_test.txt')
-    main()
+    # main()
+    # path = 'mydata/I00000.png'
+    # img1 = cv2.imread(path)
+
+
     # print('./models/model14/log14.txt')
-    # true_txt = './models/MSDN/model1/log1.txt'
+    # true_txt = './mymodel/RRN/log24.txt'
+    true_txt = './models/MSDN/model5/log5.txt'
+
     # # test_txt = './test2_model21_epoch7.txt'
-    # visualizeErrorLoss(true_txt)
+    visualizeErrorLoss(true_txt,ylabel='Multi-loss loss',title='MSDN (Unfreeze)',step=150)
