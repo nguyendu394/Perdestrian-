@@ -53,7 +53,6 @@ def train():
     # transform = ToTensor()
     full_transform=transforms.Compose([RandomHorizontalFlip(),
                                        ToTensor(),
-                                       # my_normalize()])
                                        Normalize(cfg.BGR_MEAN,cfg.BGR_STD)])
 
     my_dataset = MyDataset(imgs_csv=cfg.TRAIN.IMGS_CSV,rois_csv=cfg.TRAIN.ROIS_CSV,

@@ -35,10 +35,10 @@ __C.TRAIN.ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/im
 __C.TRAIN.IMGS_CSV = 'mydata/imgs_train.csv'
 
 #list rois data train on KAIST with ACF thres -70 csv
-__C.TRAIN.ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
+__C.TRAIN.ROIS_CSV = 'mydata/rois_trainKaist_thr70_1.csv'
 
 # Initial learning rate
-__C.TRAIN.LEARNING_RATE = 1e-6
+__C.TRAIN.LEARNING_RATE = 1e-3
 
 # Momentum
 __C.TRAIN.MOMENTUM = 0.9
@@ -47,7 +47,7 @@ __C.TRAIN.MOMENTUM = 0.9
 # __C.TRAIN.WEIGHT_DECAY = 0.0005
 
 # Minibatch size (number of regions of interest [ROIs])
-__C.TRAIN.BATCH_SIZE = 4
+__C.TRAIN.BATCH_SIZE = 2
 
 #shuffle dataset
 __C.TRAIN.SHUFFLE = True

@@ -21,7 +21,7 @@ import argparse
 raw_vgg16 = vgg.vgg16(pretrained=True)
 
 raw_RRN = MyRRN()
-raw_RRN.load_state_dict(torch.load('mymodel/RRN/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'))
+raw_RRN.load_state_dict(torch.load('mymodel/RRN/model27_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'))
 if cfg.TRAIN.FREEZE_RRN:
     print('Freeze RRN parameters')
     #freeze the feature layers of RRN
@@ -110,8 +110,7 @@ def train():
     # ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
     full_transform=transforms.Compose([RandomHorizontalFlip(),
                                        ToTensor(),
-                                       my_normalize()])
-                                  # Normalize(rgb_mean,rgb_std)])
+                                       Normalize(cfg.BGR_MEAN,cfg.BGR_STD)])
 
     device = torch.device("cuda:0")
     params = {'batch_size': cfg.TRAIN.BATCH_SIZE,
@@ -133,7 +132,7 @@ def train():
 
     MSDN_net = MyMSDN()
     MSDN_net.to(device)
-    MSDN_net.load_state_dict(torch.load('mymodel/MSDN/model4/model4_lr_1e-4_bz_2_NBS_128_norm_epoch_4.pth'))
+    MSDN_net.load_state_dict(torch.load('mymodel/MSDN/model5/model5_lr_1e-4_bz_2_NBS_128_norm_epoch_4.pth'))
 
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT)
@@ -146,11 +145,6 @@ def train():
             label = sample['label']
             bbb = sample['bb']
             gt_rois = sample['gt_roi']
-            # print(sample['gt'])
-            # print(gt_rois)
-            # print(gt_rois.size())
-            #
-            # exit()
             # label,bbb,gt_rois = label.to(device),bbb.to(device),gt_rois.to(device)
 
             bbox_label,bbox_targets,bbox_inside_weights,bbox_outside_weights = createTarget(label,bbb,gt_rois)
@@ -191,12 +185,12 @@ def train():
             if i % 10 == 9:    # In mỗi 2000 mini-batches.
                 text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
                 print(text)
-                exit()
-                with open('models/MSDN/model5/log5.txt','a') as f:
+
+                with open('models/MSDN/model6/log6.txt','a') as f:
                     f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(MSDN_net.state_dict(), 'models/MSDN/model5/model5_lr_1e-4_bz_2_NBS_128_norm_epoch_{}.pth'.format(epoch))
+        torch.save(MSDN_net.state_dict(), 'models/MSDN/model6/model6_lr_1e-3_bz_4_NBS_128_norm_epoch_{}.pth'.format(epoch))
     print('Huấn luyện xong')
 
 def test():
@@ -327,8 +321,8 @@ def test():
                     l,t,r,b,s = bb
                     w = r-l
                     h = b-t
-                    if w > 0 and h >= cfg.TEST.MIN_HEIGHT and h <= cfg.TEST.MAX_HEIGHT:
-                        f.write('{id},{l:9.3f},{t:9.3f},{w:9.3f},{h:9.3f},{s:9.3f}\n'.format(id=i+1,l=l,t=t,w=w,h=h,s=s*100))
+                    # if w > 0 and h >= cfg.TEST.MIN_HEIGHT and h <= cfg.TEST.MAX_HEIGHT:
+                    f.write('{id},{l:9.3f},{t:9.3f},{w:9.3f},{h:9.3f},{s:9.3f}\n'.format(id=i+1,l=l,t=t,w=w,h=h,s=s*100))
 
 def parse_args():
     """

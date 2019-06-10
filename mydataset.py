@@ -70,7 +70,7 @@ class MyDataset(Dataset):
             temp = [float(d[1]),float(d[2]),float(d[1])+float(d[3]),float(d[2])+float(d[4]),1]
             gt_boxes.append(temp)
 
-        all_rois = getAllrois(bbs[:,:-1], gt_boxes)
+        all_rois = getAllrois(bbs, gt_boxes)
         all_rois = torch.from_numpy(all_rois)
         #padding ground-truth
         if self.train:
@@ -113,8 +113,8 @@ def getSampleDataset(id = None,bz=1,p=0.5,trans=True,train=True):
     # ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
     full_transform=transforms.Compose([RandomHorizontalFlip(p),
                                        ToTensor(),
-                                       my_normalize()])
-                                       # Normalize(cfg.BGR_MEAN,cfg.BGR_STD)])
+                                       # my_normalize()])
+                                       Normalize(cfg.BGR_MEAN,cfg.BGR_STD)])
     if trans is False:
         full_transform = None
 

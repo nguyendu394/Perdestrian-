@@ -6,10 +6,8 @@ import pandas as pd
 from skimage import io, color, exposure,restoration
 from PIL import Image
 import torch
+from config import cfg
 
-
-mean=(0,485, 0,456, 0,406)
-std=(0,229, 0,224, 0,225)
 def equalizeHist(gray):
     # gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     # clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(8, 8))
@@ -20,7 +18,8 @@ def equalizeHist(gray):
     gray = restoration.denoise_tv_chambolle(gray , weight=0.1)
     # claheImg = cv2.equalizeHist(img)
     # gray = cv2.fastNlMeansDenoising(gray,None,4,7,21)
-
+    # print(gray)
+    # exit()
     return gray
 
 def visualizeRP(img,bbs, gt=None, fm = 'ltrb',c = 255):
@@ -91,18 +90,32 @@ def convertRoisACF2CSV(path,new):
 
     print('Done!')
 
-def convertTensor2Img(out):
+def unnormalize(tensor, mean, std):
+    """UNNormalize a tensor image with mean and standard deviation.
+    See ``Normalize`` for more details.
+    Args:
+        tensor (Tensor): Tensor image of size (C, H, W) to be normalized.
+        mean (sequence): Sequence of means for each channel.
+        std (sequence): Sequence of standard deviations for each channely.
+    Returns:
+        Tensor: Normalized Tensor image.
+    """
+    # TODO: make efficient
+    for t, m, s in zip(tensor, mean, std):
+        t.mul_(s).add_(m)
+    return tensor
+
+
+def convertTensor2Img(out,norm=True):
     '''
     Visualize a Tensors
     input: a Tensors on cpu (1x1xhxw)
     output: a image(numpy)
     '''
+    if norm:
+        out = unnormalize(out, cfg.BGR_MEAN, cfg.BGR_STD)
 
-
-    if out.dtype == torch.float:
-        out = out*255
-
-    out = out.type('torch.ByteTensor')
+    # out = out.type('torch.ByteTensor')
     out = out.cpu()
     out = out.detach().numpy()
     # print(type(out[0][0][0][0]))
@@ -224,8 +237,8 @@ if __name__ == '__main__':
 
 
     # print('./models/model14/log14.txt')
-    # true_txt = './mymodel/RRN/log24.txt'
-    true_txt = './models/MSDN/model5/log5.txt'
+    true_txt = './models/RRN/model27/log27.txt'
+    # true_txt = './models/MSDN/model5/log5.txt'
 
     # # test_txt = './test2_model21_epoch7.txt'
     visualizeErrorLoss(true_txt,ylabel='Multi-loss loss',title='MSDN (Unfreeze)',step=150)
