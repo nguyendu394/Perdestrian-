@@ -40,8 +40,7 @@ class MyMSDN(nn.Module):
         # self.front_roi_pool = ROIPool((7, 7), 1/8)
         # self.last_roi_pool = ROIPool((7, 7), 1/16)
         self.conv1 = nn.Conv2d(in_channels=2048, out_channels=1024, kernel_size=1)
-        # self.fc1 = nn.Linear(1024*7*7, 4096)
-        # self.avgpool = raw_vgg16.avgpool
+
         self.FC = nn.Sequential(
             nn.Linear(1024 * 7 * 7, 4096),
             nn.ReLU(True),
@@ -49,7 +48,6 @@ class MyMSDN(nn.Module):
             nn.Linear(4096, 4096),
             nn.ReLU(True),
             nn.Dropout(),
-            # nn.Linear(4096, num_classes),
         )
 
         self.score_fc = nn.Linear(4096, cfg.NUM_CLASSES)
@@ -66,13 +64,13 @@ class MyMSDN(nn.Module):
         b1 = self.front_subnetB(x)
         b2 = self.last_subnetB(b1)
 
-        #front_roi_pool
+        #front_roi_pool subsetA
         x1 = ROIPool(a1,rois,(7, 7), 1/8)
-        #last_roi_pool
+        #last_roi_pool subsetA
         x2 = ROIPool(a2,rois,(7, 7), 1/16)
-        #front_roi_pool
+        #front_roi_pool subsetB
         x3 = ROIPool(b1,rois,(7, 7), 1/8)
-        #last_roi_pool
+        #last_roi_pool subsetB
         x4 = ROIPool(b2,rois,(7, 7), 1/16)
 
         x = torch.cat((x1,x2,x3,x4),1)
@@ -132,11 +130,11 @@ def train():
 
     MSDN_net = MyMSDN()
     MSDN_net.to(device)
-    MSDN_net.load_state_dict(torch.load('models/MSDN/model6/model6_lr_1e-3_bz_4_NBS_128_norm_epoch_4.pth'))
+    MSDN_net.load_state_dict(torch.load('models/MSDN/model6/model6_lr_1e-3_bz_4_NBS_128_norm_epoch_4_2.pth'))
 
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT)
-
+    f = open('models/MSDN/model7/log7.txt','a')
     for epoch in range(max_epoch):  # Lặp qua bộ dữ liệu huấn luyện nhiều lần
         running_loss = 0.0
         st = time.time()
@@ -171,7 +169,7 @@ def train():
             cls_score, bbox_pred = MSDN_net(sam,bbb)
 
             RCNN_loss_cls = F.cross_entropy(cls_score, bbox_label)
-            # print(RCNN_loss_cls.mean())
+
             RCNN_loss_bbox = smooth_l1_loss(bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights)
             # print(RCNN_loss_bbox.mean())
 
@@ -185,12 +183,12 @@ def train():
             if i % 10 == 9:    # In mỗi 2000 mini-batches.
                 text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
                 print(text)
-
-                with open('models/MSDN/model6/log6.txt','a') as f:
-                    f.write(text + '\n')
+                #write txt file
+                f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(MSDN_net.state_dict(), 'models/MSDN/model6/model6_lr_1e-3_bz_4_NBS_128_norm_epoch_{}_2.pth'.format(epoch))
+        torch.save(MSDN_net.state_dict(), 'models/MSDN/model7/model7_lr_1e-4_bz_4_NBS_128_norm_epoch_{}.pth'.format(epoch))
+    f.close()
     print('Huấn luyện xong')
 
 def test():
@@ -203,7 +201,7 @@ def test():
               'shuffle':False,
               'num_workers':cfg.TRAIN.NUM_WORKERS}
     print(params)
-
+    print('score thress: {}'.format(cfg.TEST.THRESS ))
 
     my_dataset = MyDataset(imgs_csv=cfg.TEST.IMGS_CSV,rois_csv=cfg.TEST.ROIS_CSV,
     root_dir=cfg.TEST.ROOT_DIR, ther_path=cfg.TEST.THERMAL_PATH,transform = full_transform,train=False)
@@ -218,6 +216,8 @@ def test():
 
     running_loss = 0.0
     st = time.time()
+
+    f = open('mymodel/MSDN/test/test_model6_lr_1e-3_bz_2_sco_0_epoch_4-.txt','a')
     for i, sample in enumerate(dataloader):
         print(sample['img_info'])
         label = sample['label']
@@ -294,13 +294,13 @@ def test():
         print('writing image {}'.format(i+1))
         if cls_dets.numel() > 0:
             bbs = cls_dets.cpu().detach().numpy()
-            with open('mymodel/MSDN/test/test_model6_lr_1e-3_bz_4_NBS_128_norm_epoch_4.txt','a') as f:
-                for bb in bbs:
-                    l,t,r,b,s = bb
-                    w = r-l
-                    h = b-t
-                    # if w > 0 and h >= cfg.TEST.MIN_HEIGHT and h <= cfg.TEST.MAX_HEIGHT:
-                    f.write('{id},{l:9.3f},{t:9.3f},{w:9.3f},{h:9.3f},{s:9.3f}\n'.format(id=i+1,l=l,t=t,w=w,h=h,s=s*100))
+            for bb in bbs:
+                l,t,r,b,s = bb
+                w = r-l
+                h = b-t
+                # if w > 0 and h >= cfg.TEST.MIN_HEIGHT and h <= cfg.TEST.MAX_HEIGHT:
+                f.write('{id},{l:9.3f},{t:9.3f},{w:9.3f},{h:9.3f},{s:9.3f}\n'.format(id=i+1,l=l,t=t,w=w,h=h,s=s*100))
+    f.close()
 
 def parse_args():
     """

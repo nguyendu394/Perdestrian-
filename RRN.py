@@ -66,7 +66,8 @@ def train():
     RRN_net.load_state_dict(torch.load('models/RRN/model24/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'))
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,RRN_net.parameters()), lr=LR, momentum=MT)
-
+    
+    f = open('models/RRN/model27/log27.txt','a')
     for epoch in range(max_epoch):  # Lặp qua bộ dữ liệu huấn luyện nhiều lần
         running_loss = 0.0
         st = time.time()
@@ -85,18 +86,13 @@ def train():
             ind = ind.repeat(1,num).view(-1,1)
             bbb[:,0] = ind[:,0]
 
-
             tm = sample['tm']
-            # print(bbb.shape)
-            # print(tm.shape)
-            sam,bbb,tm = sam.to(device), bbb.to(device), tm.to(device)
 
-            # roi_pool = ROIPool((50, 50), 1/1)
+            sam,bbb,tm = sam.to(device), bbb.to(device), tm.to(device)
 
             # labels_output = roi_pool(tm,bbb)
             labels_output = resizeThermal(tm, bbb)
             labels_output = labels_output.to(device)
-
 
             # Xoá giá trị đạo hàm
             optimizer.zero_grad()
@@ -114,11 +110,12 @@ def train():
             if i % 10 == 9:    # In mỗi 2000 mini-batches.
                 text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
                 print(text)
-                with open('models/RRN/model27/log27.txt','a') as f:
-                    f.write(text + '\n')
+
+                f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
         torch.save(RRN_net.state_dict(), 'models/RRN/model27/model27_lr_1e-6_bz_6_NBS_128_norm_epoch_{}.pth'.format(epoch))
+    f.close()
     print('Huấn luyện xong')
 
 
