@@ -70,7 +70,7 @@ class MyDataset(Dataset):
             temp = [float(d[1]),float(d[2]),float(d[1])+float(d[3]),float(d[2])+float(d[4]),1]
             gt_boxes.append(temp)
 
-        all_rois = getAllrois(bbs, gt_boxes)
+        all_rois = getAllrois(bbs[:,:-1], gt_boxes)
         all_rois = torch.from_numpy(all_rois)
         #padding ground-truth
         if self.train:

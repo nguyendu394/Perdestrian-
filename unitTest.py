@@ -9,7 +9,7 @@ from RRN import MyRRN
 import torchvision.ops.roi_pool as ROIPool
 from torchvision.ops import nms
 
-def testDataset(sample):
+def testDataset(sample,drawgt=None):
     print(sample['img_info'])
 
     sam = sample['image']
@@ -28,11 +28,12 @@ def testDataset(sample):
     gt = gt.cpu()
     gt = gt.view(-1,5)
     gt = gt.detach().numpy()
-    print(gt)
 
     raw = convertTensor2Img(sam)
     ther = convertTensor2Img(tm,norm=False)
     # print(ther)
+    if not drawgt:
+        gt = None
     draw_bbs = visualizeRP(raw, bbs,gt)
 
     # img,bboxes = flipBoundingBox(raw, bbs)
@@ -51,6 +52,7 @@ def testResizeThermal(sample):
     sam = sample['image']
     bbb = sample['bb']
     tm = sample['tm']
+    print(tm.shape)
     gt = sample['gt']
 
     bbb = bbb.cpu()
@@ -177,10 +179,10 @@ def main():
     sample = getSampleDataset(train=True,bz=1)
 
     # print(sample['bb'])
-    # testDataset(sample)
+    testDataset(sample,drawgt=False)
     # testROIpool(sample)
     # testResizeThermal(sample)
-    testRRN_Pretrain(sample, pre)
+    # testRRN_Pretrain(sample, pre)
 if __name__ == '__main__':
     main()
     # cls_dets = torch.Tensor([[],[],[],[],[]]).permute(1,0)

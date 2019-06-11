@@ -30,6 +30,8 @@ def visualizeRP(img,bbs, gt=None, fm = 'ltrb',c = 255):
            gt (numpy) l,t,w,h,cls/l,t,r,b,cls: nx5
     '''
 
+    print('GT',gt)
+
     bbs = bbs.astype(np.int32)
     for d in bbs:
         id,l,t,r,b = d
@@ -237,8 +239,8 @@ if __name__ == '__main__':
 
 
     # print('./models/model14/log14.txt')
-    true_txt = './models/RRN/model27/log27.txt'
-    # true_txt = './models/MSDN/model5/log5.txt'
+    # true_txt = './models/RRN/model27/log27.txt'
+    true_txt = './models/MSDN/model6/log6.txt'
 
     # # test_txt = './test2_model21_epoch7.txt'
     visualizeErrorLoss(true_txt,ylabel='Multi-loss loss',title='MSDN (Unfreeze)',step=150)

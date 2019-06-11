@@ -6,12 +6,9 @@ from easydict import EasyDict as edict
 
 __C = edict()
 # Consumers can get config by:
-#   from fast_rcnn_config import cfg
 cfg = __C
 
 #normalize mean std (ImageNet)
-# __C.rgb_mean = (0.4914, 0.4822, 0.4465)
-# __C.rgb_std = (0.2023, 0.1994, 0.2010)
 __C.BGR_MEAN = (0.406, 0.456, 0.485)
 __C.BGR_STD = (0.225, 0.224, 0.229)
 
@@ -35,7 +32,7 @@ __C.TRAIN.ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/im
 __C.TRAIN.IMGS_CSV = 'mydata/imgs_train.csv'
 
 #list rois data train on KAIST with ACF thres -70 csv
-__C.TRAIN.ROIS_CSV = 'mydata/rois_trainKaist_thr70_1.csv'
+__C.TRAIN.ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
 
 # Initial learning rate
 __C.TRAIN.LEARNING_RATE = 1e-3

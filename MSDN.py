@@ -132,7 +132,7 @@ def train():
 
     MSDN_net = MyMSDN()
     MSDN_net.to(device)
-    MSDN_net.load_state_dict(torch.load('mymodel/MSDN/model5/model5_lr_1e-4_bz_2_NBS_128_norm_epoch_4.pth'))
+    MSDN_net.load_state_dict(torch.load('models/MSDN/model6/model6_lr_1e-3_bz_4_NBS_128_norm_epoch_4.pth'))
 
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT)
@@ -190,47 +190,32 @@ def train():
                     f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(MSDN_net.state_dict(), 'models/MSDN/model6/model6_lr_1e-3_bz_4_NBS_128_norm_epoch_{}.pth'.format(epoch))
+        torch.save(MSDN_net.state_dict(), 'models/MSDN/model6/model6_lr_1e-3_bz_4_NBS_128_norm_epoch_{}_2.pth'.format(epoch))
     print('Huấn luyện xong')
 
 def test():
     print('TESTING MSDN...')
-    #
-    # THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test_tm/'
-    # ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test'
-    # IMGS_CSV = 'mydata/imgs_test.csv'
-    # ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
     full_transform=transforms.Compose([ToTensor(),
-                                       my_normalize()])
-                                  # Normalize(rgb_mean,rgb_std)])
+                                       Normalize(cfg.BGR_MEAN,cfg.BGR_STD)])
 
     device = torch.device("cuda:0")
     params = {'batch_size': 1,
               'shuffle':False,
               'num_workers':cfg.TRAIN.NUM_WORKERS}
     print(params)
-    # max_epoch = 5
-    # print('max_epoch',max_epoch)
-    # LR = 1e-4 #learning rate
-    # print('learning_rate',LR)
-    # MT = 0.9 #momentum
+
 
     my_dataset = MyDataset(imgs_csv=cfg.TEST.IMGS_CSV,rois_csv=cfg.TEST.ROIS_CSV,
     root_dir=cfg.TEST.ROOT_DIR, ther_path=cfg.TEST.THERMAL_PATH,transform = full_transform,train=False)
     print(my_dataset.__len__())
     dataloader = DataLoader(my_dataset, **params)
-    # print(list(aa.front_subnetB.parameters())[2])
     device = torch.device("cuda:0")
 
     MSDN_net = MyMSDN()
     MSDN_net.to(device)
 
-    MSDN_net.load_state_dict(torch.load('mymodel/MSDN/model5/model5_lr_1e-4_bz_2_NBS_128_norm_epoch_4.pth'))
+    MSDN_net.load_state_dict(torch.load('models/MSDN/model6/model6_lr_1e-3_bz_4_NBS_128_norm_epoch_4.pth'))
 
-    # criterion = nn.MSELoss()
-    # optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT)
-
-    # for epoch in range(max_epoch):  # Lặp qua bộ dữ liệu huấn luyện nhiều lần
     running_loss = 0.0
     st = time.time()
     for i, sample in enumerate(dataloader):
@@ -257,8 +242,6 @@ def test():
         ind = torch.arange(params['batch_size'],requires_grad=False).view(-1,1)
         ind = ind.repeat(1,num).view(-1,1)
         bbb[:,0] = ind[:,0]
-        # print(bbb.shape)
-        # print(tm.shape)
         sam = sam.to(device)
         bbb = bbb.to(device)
 
@@ -307,16 +290,11 @@ def test():
         else:
             cls_dets = torch.Tensor([[],[],[],[],[]]).permute(1,0)
 
-        # print(sample['gt'])
-        #
-        # img = showBbs(sam, cls_dets,sample['gt'])
-        # cv2.imshow('AA',img)
-        # cv2.waitKey()
-        # cv2.destroyAllWindows()
+
         print('writing image {}'.format(i+1))
         if cls_dets.numel() > 0:
             bbs = cls_dets.cpu().detach().numpy()
-            with open('mymodel/MSDN/test/test1_premodel5_lr4_thres5_scale.txt','a') as f:
+            with open('mymodel/MSDN/test/test_model6_lr_1e-3_bz_4_NBS_128_norm_epoch_4.txt','a') as f:
                 for bb in bbs:
                     l,t,r,b,s = bb
                     w = r-l
