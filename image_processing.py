@@ -22,7 +22,7 @@ def equalizeHist(gray):
     # exit()
     return gray
 
-def visualizeRP(img,bbs, gt=None, fm = 'ltrb',c = 255):
+def visualizeRP(img,bbs, gt=None, fm = 'ltrb'):
     '''
     Visualize region proposal
     input: img (numpy) WxHxC
@@ -31,6 +31,8 @@ def visualizeRP(img,bbs, gt=None, fm = 'ltrb',c = 255):
     '''
 
     print('GT',gt)
+    if img.shape[2] == 1:
+        img = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
 
     bbs = bbs.astype(np.int32)
     for d in bbs:
@@ -38,10 +40,10 @@ def visualizeRP(img,bbs, gt=None, fm = 'ltrb',c = 255):
         # print(l,t,r,b)
         # print(img.shape)
         if fm == 'ltrb':
-            img = cv2.rectangle(img,(l,t),(r,b),(0,c,0),1)
+            img = cv2.rectangle(img,(l,t),(r,b),(0,255,0),1)
 
         elif fm == 'ltwh':
-            img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,0),1)
+            img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,255,0),1)
             # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
         if gt is not None:
             if np.prod(gt.shape):
@@ -177,6 +179,7 @@ def showBbs(img, bbs, gt = None):
 def readLogFile(path):
     print(path)
     val = []
+    sec = []
     st = 10
     with open(path,'r') as f:
         data = f.readlines()
@@ -184,13 +187,17 @@ def readLogFile(path):
 
     for d in data:
         val.append(float(d.split()[3]))
-    return iters, val
+        sec.append(float(d.split()[-1]))
+    return iters, val, sec
 
 def visualizeErrorLoss(true_txt, false_txt=None, title=' ', ylabel=' ',xlabel='iterations', step=100):
     if false_txt:
-        f_iter, f_val = readLogFile(false_txt)
+        f_iter, f_val, f_time = readLogFile(false_txt)
         plt.plot(f_iter, f_val, color='g')
-    t_iter, t_val = readLogFile(true_txt)
+        print('total testing time: {}'.format(sum(f_time)))
+
+    t_iter, t_val, t_time = readLogFile(true_txt)
+    print('total training time: {}'.format(sum(t_time)))
     t_iter = np.array(t_iter)
     t_val = np.array(t_val)
 
@@ -239,8 +246,8 @@ if __name__ == '__main__':
 
 
     # print('./models/model14/log14.txt')
-    # true_txt = './models/RRN/model27/log27.txt'
-    true_txt = './models/MSDN/model6/log6.txt'
+    # true_txt = './mymodel/RRN/log24.txt'
+    true_txt = './models/MSDN/model7/log7.txt'
 
     # # test_txt = './test2_model21_epoch7.txt'
-    visualizeErrorLoss(true_txt,ylabel='Multi-loss loss',title='MSDN (Unfreeze)',step=150)
+    visualizeErrorLoss(true_txt,ylabel='Multi-loss loss',title='MSDN (Unfreeze)',step=100)

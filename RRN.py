@@ -48,7 +48,6 @@ def train():
     print('learning_rate',LR)
     MT = cfg.TRAIN.MOMENTUM
 
-    device = torch.device("cuda:0")
     # cudnn.benchmark = True
     # transform = ToTensor()
     full_transform=transforms.Compose([RandomHorizontalFlip(),
@@ -61,12 +60,12 @@ def train():
     dataloader = DataLoader(my_dataset, **params)
 
     RRN_net = MyRRN()
-    RRN_net.to(device)
+    RRN_net.to(cfg.DEVICE)
 
     RRN_net.load_state_dict(torch.load('models/RRN/model24/model24_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'))
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,RRN_net.parameters()), lr=LR, momentum=MT)
-    
+
     f = open('models/RRN/model27/log27.txt','a')
     for epoch in range(max_epoch):  # Lặp qua bộ dữ liệu huấn luyện nhiều lần
         running_loss = 0.0
@@ -88,11 +87,11 @@ def train():
 
             tm = sample['tm']
 
-            sam,bbb,tm = sam.to(device), bbb.to(device), tm.to(device)
+            sam,bbb,tm = sam.to(cfg.DEVICE), bbb.to(cfg.DEVICE), tm.to(cfg.DEVICE)
 
             # labels_output = roi_pool(tm,bbb)
             labels_output = resizeThermal(tm, bbb)
-            labels_output = labels_output.to(device)
+            labels_output = labels_output.to(cfg.DEVICE)
 
             # Xoá giá trị đạo hàm
             optimizer.zero_grad()
@@ -131,7 +130,6 @@ def test():
           'shuffle': True,
           'num_workers': 24}
 
-    device = torch.device("cuda:0")
     full_transform=transforms.Compose([RandomHorizontalFlip(),
                                        ToTensor(),])
                                   # Normalize(rgb_mean,rgb_std)])
@@ -142,7 +140,7 @@ def test():
     dataloader = DataLoader(my_dataset, **params)
 
     RRN_net = MyRRN()
-    RRN_net.to(device)
+    RRN_net.to(cfg.DEVICE)
     RRN_net.load_state_dict(torch.load('models/model21/model21_lr_1e-7_bz_6_NBS_128_data_True_epoch_7.ptx'))
 
     st = time.time()
@@ -169,13 +167,13 @@ def test():
         tm = sample['tm']
         # print(bbb.shape)
         # print(tm.shape)
-        sam,bbb,tm = sam.to(device), bbb.to(device), tm.to(device)
+        sam,bbb,tm = sam.to(cfg.DEVICE), bbb.to(cfg.DEVICE), tm.to(cfg.DEVICE)
 
         # roi_pool = ROIPool((50, 50), 1/1)
 
         # labels_output = roi_pool(tm,bbb)
         labels_output = resizeThermal(tm, bbb)
-        labels_output = labels_output.to(device)
+        labels_output = labels_output.to(cfg.DEVICE)
         # print('label shape',labels_output.shape)
 
         # Tính giá trị tiên đoán, đạo hàm, và dùng bộ tối ưu hoá để cập nhật trọng số.

@@ -52,7 +52,7 @@ def testResizeThermal(sample):
     sam = sample['image']
     bbb = sample['bb']
     tm = sample['tm']
-    print(tm.shape)
+    print(sample['img_info'])
     gt = sample['gt']
 
     bbb = bbb.cpu()
@@ -71,24 +71,23 @@ def testResizeThermal(sample):
     bbb[:,0] = ind[:,0]
 
     labels_output = resizeThermal(tm, bbb)
-
+    print(labels_output.shape)
     # labels_output = labels_output.type('torch.ByteTensor')
-
+    exit()
     ther = convertTensor2Img(tm,norm=False)
     bbb = bbb.detach().numpy()
-    imgg = visualizeRP(ther, bbb)
+    imgg = visualizeRP(ther, bbb[:9])
 
     cv2.imshow('winname', imgg)
-    for ind,labels in enumerate(labels_output):
+    for ind,labels in enumerate(labels_output[:9]):
         p = convertTensor2Img(labels,norm=False)
         cv2.imshow('bbs{}'.format(ind), p)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 def testRRN_Pretrain(sample,pre):
-    device = torch.device("cuda:0")
     RRN_net = MyRRN()
-    RRN_net.to(device)
+    RRN_net.to(cfg.DEVICE)
     RRN_net.load_state_dict(torch.load(pre))
 
     sam = sample['image']
@@ -104,9 +103,9 @@ def testRRN_Pretrain(sample,pre):
     bbb[:,0] = ind[:,0]
 
     labels_output = resizeThermal(tm, bbb)
-    # labels_output = labels_output.to(device)
+    # labels_output = labels_output.to(cfg.DEVICE)
 
-    sam,bbb,tm = sam.to(device), bbb.to(device), tm.to(device)
+    sam,bbb,tm = sam.to(cfg.DEVICE), bbb.to(cfg.DEVICE), tm.to(cfg.DEVICE)
 
     out_RRN = RRN_net(sam,bbb)
     # out_RRN = out_RRN.cpu().detach().numpy()
@@ -131,7 +130,6 @@ def testRRN_Pretrain(sample,pre):
     cv2.destroyAllWindows()
 
 def  testROIpool(sample):
-    device = torch.device("cuda:0")
     sam = sample['image']
     bbs = sample['bb']
     bz = bbs.size(0)
@@ -142,7 +140,7 @@ def  testROIpool(sample):
     ind = ind.repeat(1,num).view(-1,1)
     bbs[:,0] = ind[:,0]
 
-    sam,bbs = sam.to(device),bbs.to(device)
+    sam,bbs = sam.to(cfg.DEVICE),bbs.to(cfg.DEVICE)
     simg = ROIPool(sam,bbs,(50,50),1)
 
 
@@ -166,7 +164,7 @@ def testNMS(bbs):
     # idx = bbs[:,:,0].view(-1)
     bbox = bbs[:,:,1:-1].view(-1,4)
     score = bbs[:,:,-1].view(-1)
-    bbox,score = bbox.cuda(),score.cuda()
+    bbox,score = bbox.to(cfg.DEVICE),score.to(cfg.DEVICE)
     keep = nms(bbox,score,0.5)
     if bbox.size(0) == keep.size(0):
         return True
@@ -179,9 +177,9 @@ def main():
     sample = getSampleDataset(train=True,bz=1)
 
     # print(sample['bb'])
-    testDataset(sample,drawgt=False)
+    # testDataset(sample,drawgt=False)
     # testROIpool(sample)
-    # testResizeThermal(sample)
+    testResizeThermal(sample)
     # testRRN_Pretrain(sample, pre)
 if __name__ == '__main__':
     main()

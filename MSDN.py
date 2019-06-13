@@ -7,7 +7,7 @@ import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-# from model.roi_layers import ROIPool
+
 import torchvision.ops.roi_pool as ROIPool
 from RRN import MyRRN
 import vgg, cv2, time
@@ -52,10 +52,6 @@ class MyMSDN(nn.Module):
 
         self.score_fc = nn.Linear(4096, cfg.NUM_CLASSES)
         self.bbox_fc = nn.Linear(4096,4)
-        # self.deconv1 = nn.ConvTranspose2d(in_channels=512,out_channels=64,kernel_size=4,stride=8, padding=1)
-        # self.fc1 = nn.Linear( 512* 7 * 7, 4096)
-        # self.deconv2 = nn.ConvTranspose2d(in_channels=3,out_channels=64,kernel_size=4,stride=8, padding=1)
-
 
     def forward(self, x, rois):
         a1 = self.front_subnetA(x)
@@ -75,9 +71,7 @@ class MyMSDN(nn.Module):
 
         x = torch.cat((x1,x2,x3,x4),1)
         x = self.conv1(x)
-        # x = self.fc1(x)
-        # x = F.relu(self.deconv1(x))
-        # x = self.conv1(x)
+
         x = x.view(x.size(0), -1)
         x = self.FC(x)
 
@@ -102,15 +96,11 @@ def createTarget(label,bbb,gt_rois):
 
 def train():
     print('TRAINING MSDN...')
-    # THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
-    # ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
-    # IMGS_CSV = 'mydata/imgs_train.csv'
-    # ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
+
     full_transform=transforms.Compose([RandomHorizontalFlip(),
                                        ToTensor(),
                                        Normalize(cfg.BGR_MEAN,cfg.BGR_STD)])
 
-    device = torch.device("cuda:0")
     params = {'batch_size': cfg.TRAIN.BATCH_SIZE,
               'shuffle': cfg.TRAIN.SHUFFLE,
               'num_workers': cfg.TRAIN.NUM_WORKERS}
@@ -125,16 +115,18 @@ def train():
     root_dir=cfg.TRAIN.ROOT_DIR, ther_path=cfg.TRAIN.THERMAL_PATH,transform = full_transform)
     print(my_dataset.__len__())
     dataloader = DataLoader(my_dataset, **params)
-    # print(list(aa.front_subnetB.parameters())[2])
-    device = torch.device("cuda:0")
 
     MSDN_net = MyMSDN()
-    MSDN_net.to(device)
-    MSDN_net.load_state_dict(torch.load('models/MSDN/model6/model6_lr_1e-3_bz_4_NBS_128_norm_epoch_4_2.pth'))
+    MSDN_net.to(cfg.DEVICE)
+
+    pretrain = 'models/MSDN/model6/model6_lr_1e-3_bz_4_NBS_128_norm_epoch_3.pth'
+    print('pretrain: ' + pretrain)
+    MSDN_net.load_state_dict(torch.load(pretrain))
 
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT)
-    f = open('models/MSDN/model7/log7.txt','a')
+
+    f = open('models/MSDN/model8/log8.txt','a')
     for epoch in range(max_epoch):  # Lặp qua bộ dữ liệu huấn luyện nhiều lần
         running_loss = 0.0
         st = time.time()
@@ -143,11 +135,11 @@ def train():
             label = sample['label']
             bbb = sample['bb']
             gt_rois = sample['gt_roi']
-            # label,bbb,gt_rois = label.to(device),bbb.to(device),gt_rois.to(device)
+            # label,bbb,gt_rois = label.to(cfg.DEVICE),bbb.to(cfg.DEVICE),gt_rois.to(cfg.DEVICE)
 
             bbox_label,bbox_targets,bbox_inside_weights,bbox_outside_weights = createTarget(label,bbb,gt_rois)
 
-            bbox_label,bbox_targets,bbox_inside_weights,bbox_outside_weights = bbox_label.to(device),bbox_targets.to(device),bbox_inside_weights.to(device),bbox_outside_weights.to(device)
+            bbox_label,bbox_targets,bbox_inside_weights,bbox_outside_weights = bbox_label.to(cfg.DEVICE),bbox_targets.to(cfg.DEVICE),bbox_inside_weights.to(cfg.DEVICE),bbox_outside_weights.to(cfg.DEVICE)
 
             sam = sample['image']
 
@@ -160,11 +152,8 @@ def train():
             ind = ind.repeat(1,num).view(-1,1)
             bbb[:,0] = ind[:,0]
 
-
-            # print(bbb.shape)
-            # print(tm.shape)
-            sam = sam.to(device)
-            bbb = bbb.to(device)
+            sam = sam.to(cfg.DEVICE)
+            bbb = bbb.to(cfg.DEVICE)
 
             cls_score, bbox_pred = MSDN_net(sam,bbb)
 
@@ -187,8 +176,10 @@ def train():
                 f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        torch.save(MSDN_net.state_dict(), 'models/MSDN/model7/model7_lr_1e-4_bz_4_NBS_128_norm_epoch_{}.pth'.format(epoch))
+        name_model = 'models/MSDN/model8/model8_lr_1e-4_bz_4_NBS_128_norm_epoch_{}.pth'.format(epoch)
+        torch.save(MSDN_net.state_dict(), name_model)
     f.close()
+    print('model saved: ' + name_model)
     print('Huấn luyện xong')
 
 def test():
@@ -196,7 +187,6 @@ def test():
     full_transform=transforms.Compose([ToTensor(),
                                        Normalize(cfg.BGR_MEAN,cfg.BGR_STD)])
 
-    device = torch.device("cuda:0")
     params = {'batch_size': 1,
               'shuffle':False,
               'num_workers':cfg.TRAIN.NUM_WORKERS}
@@ -207,32 +197,32 @@ def test():
     root_dir=cfg.TEST.ROOT_DIR, ther_path=cfg.TEST.THERMAL_PATH,transform = full_transform,train=False)
     print(my_dataset.__len__())
     dataloader = DataLoader(my_dataset, **params)
-    device = torch.device("cuda:0")
 
     MSDN_net = MyMSDN()
-    MSDN_net.to(device)
-
-    MSDN_net.load_state_dict(torch.load('models/MSDN/model6/model6_lr_1e-3_bz_4_NBS_128_norm_epoch_4.pth'))
+    MSDN_net.to(cfg.DEVICE)
+    pretrain = 'models/MSDN/model7/model7_lr_1e-4_bz_4_NBS_128_norm_epoch_0.pth'
+    print('pretrain: ' + pretrain)
+    MSDN_net.load_state_dict(torch.load(pretrain))
 
     running_loss = 0.0
     st = time.time()
 
-    f = open('mymodel/MSDN/test/test_model6_lr_1e-3_bz_2_sco_0_epoch_4-.txt','a')
+    f = open('mymodel/MSDN/test/test_model7_lr_1e-4_bz_2_sco_05_epoch_0.txt','a')
     for i, sample in enumerate(dataloader):
         print(sample['img_info'])
         label = sample['label']
         bbb = sample['bb']
         gt_rois = sample['gt_roi']
 
-        # label,bbb,gt_rois = label.to(device),bbb.to(device),gt_rois.to(device)
+        # label,bbb,gt_rois = label.to(cfg.DEVICE),bbb.to(cfg.DEVICE),gt_rois.to(cfg.DEVICE)
 
         bbox_label,bbox_targets,bbox_inside_weights,bbox_outside_weights = createTarget(label,bbb,gt_rois)
 
-        bbox_label,bbox_targets,bbox_inside_weights,bbox_outside_weights = bbox_label.to(device),bbox_targets.to(device),bbox_inside_weights.to(device),bbox_outside_weights.to(device)
+        bbox_label,bbox_targets,bbox_inside_weights,bbox_outside_weights = bbox_label.to(cfg.DEVICE),bbox_targets.to(cfg.DEVICE),bbox_inside_weights.to(cfg.DEVICE),bbox_outside_weights.to(cfg.DEVICE)
 
 
         sam = sample['image']
-        boxes = bbb[:, :, 1:5].cuda()
+        boxes = bbb[:, :, 1:5].to(cfg.DEVICE)
         # print('boxes of size', boxes)
         # bbb = sample['bb']
 
@@ -242,8 +232,8 @@ def test():
         ind = torch.arange(params['batch_size'],requires_grad=False).view(-1,1)
         ind = ind.repeat(1,num).view(-1,1)
         bbb[:,0] = ind[:,0]
-        sam = sam.to(device)
-        bbb = bbb.to(device)
+        sam = sam.to(cfg.DEVICE)
+        bbb = bbb.to(cfg.DEVICE)
 
         cls_score, bbox_pred = MSDN_net(sam,bbb)
 
@@ -255,8 +245,8 @@ def test():
             box_deltas = bbox_pred.detach()
             if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
                 # Optionally normalize targets by a precomputed mean and stdev
-                box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
-                           + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+                box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).to(cfg.DEVICE) \
+                           + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).to(cfg.DEVICE)
                 box_deltas = box_deltas.view(1, -1, 4)
 
             pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)

@@ -3,10 +3,14 @@ from __future__ import division
 from __future__ import print_function
 
 from easydict import EasyDict as edict
+import torch
 
 __C = edict()
 # Consumers can get config by:
 cfg = __C
+
+__C.DEVICE = torch.device("cuda:0")
+# __C.DEVICE = torch.device("cpu")
 
 #normalize mean std (ImageNet)
 __C.BGR_MEAN = (0.406, 0.456, 0.485)
@@ -44,7 +48,7 @@ __C.TRAIN.MOMENTUM = 0.9
 # __C.TRAIN.WEIGHT_DECAY = 0.0005
 
 # Minibatch size (number of regions of interest [ROIs])
-__C.TRAIN.BATCH_SIZE = 2
+__C.TRAIN.BATCH_SIZE = 1
 
 #shuffle dataset
 __C.TRAIN.SHUFFLE = True
@@ -53,7 +57,7 @@ __C.TRAIN.SHUFFLE = True
 __C.TRAIN.NUM_WORKERS = 24
 
 #unfeeze RRN parameters
-__C.TRAIN.FREEZE_RRN = True
+__C.TRAIN.FREEZE_RRN = False
 
 
 #maximum epoch
@@ -105,7 +109,7 @@ __C.TEST.BBOX_REG = True
 __C.TEST.MAX_GTS = 14
 
 #thres scrore
-__C.TEST.THRESS = 0.0
+__C.TEST.THRESS = 0.05
 
 #thres height
 __C.TEST.MIN_HEIGHT = 45

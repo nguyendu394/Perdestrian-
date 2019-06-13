@@ -80,8 +80,6 @@ class MyDataset(Dataset):
         gt_boxes_padding = torch.from_numpy(gt_boxes_padding)
         # print('Size of all ROIS', all_rois.size())
 
-        #run on CUDA
-        # all_rois,gt_boxes_padding = all_rois.cuda(),gt_boxes_padding.cuda()
         fg_rois_per_image = int(np.round(cfg.TRAIN.FG_FRACTION * cfg.TRAIN.ROI_PER_IMAGE))
         fg_rois_per_image = 1 if fg_rois_per_image == 0 else fg_rois_per_image
         label,rois,gt_rois = sample_rois_tensor(all_rois, gt_boxes_padding, fg_rois_per_image, cfg.TRAIN.ROI_PER_IMAGE, cfg.NUM_CLASSES)
@@ -118,7 +116,6 @@ def getSampleDataset(id = None,bz=1,p=0.5,trans=True,train=True):
     if trans is False:
         full_transform = None
 
-    device = torch.device("cuda:0")
     params = {'batch_size': bz,
               'shuffle': cfg.TRAIN.SHUFFLE,
               'num_workers': cfg.TRAIN.NUM_WORKERS}
