@@ -39,16 +39,16 @@ __C.TRAIN.IMGS_CSV = 'mydata/imgs_train.csv'
 __C.TRAIN.ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
 
 # Initial learning rate
-__C.TRAIN.LEARNING_RATE = 1e-4
+__C.TRAIN.LEARNING_RATE = 1e-3
 
 # Momentum
 __C.TRAIN.MOMENTUM = 0.9
 
-# Weight decay, for regularization
-# __C.TRAIN.WEIGHT_DECAY = 0.0005
+#Weight decay, for regularization
+__C.TRAIN.WEIGHT_DECAY = 0.0005
 
 # Minibatch size (number of regions of interest [ROIs])
-__C.TRAIN.BATCH_SIZE = 1
+__C.TRAIN.BATCH_SIZE = 2
 
 #shuffle dataset
 __C.TRAIN.SHUFFLE = True
@@ -57,7 +57,7 @@ __C.TRAIN.SHUFFLE = True
 __C.TRAIN.NUM_WORKERS = 24
 
 #unfeeze RRN parameters
-__C.TRAIN.FREEZE_RRN = False
+__C.TRAIN.FREEZE_RRN = True
 
 
 #maximum epoch

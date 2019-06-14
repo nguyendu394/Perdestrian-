@@ -33,12 +33,11 @@ else:
 class MyMSDN(nn.Module):
     def __init__(self):
         super(MyMSDN, self).__init__()
-        self.front_subnetA = raw_vgg16.features
+        self.front_subnetA = raw_vgg16.features[:-7]
         self.last_subnetA = raw_vgg16.features[-7:]
         self.front_subnetB = raw_RRN.features[:-7]
         self.last_subnetB = raw_RRN.features[-7:]
-        # self.front_roi_pool = ROIPool((7, 7), 1/8)
-        # self.last_roi_pool = ROIPool((7, 7), 1/16)
+
         self.conv1 = nn.Conv2d(in_channels=2048, out_channels=1024, kernel_size=1)
 
         self.FC = nn.Sequential(
@@ -55,6 +54,7 @@ class MyMSDN(nn.Module):
 
     def forward(self, x, rois):
         a1 = self.front_subnetA(x)
+
         a2 = self.last_subnetA(a1)
 
         b1 = self.front_subnetB(x)
@@ -64,6 +64,7 @@ class MyMSDN(nn.Module):
         x1 = ROIPool(a1,rois,(7, 7), 1/8)
         #last_roi_pool subsetA
         x2 = ROIPool(a2,rois,(7, 7), 1/16)
+
         #front_roi_pool subsetB
         x3 = ROIPool(b1,rois,(7, 7), 1/8)
         #last_roi_pool subsetB
@@ -110,6 +111,8 @@ def train():
     LR = cfg.TRAIN.LEARNING_RATE #learning rate
     print('learning_rate',LR)
     MT = cfg.TRAIN.MOMENTUM #momentum
+    W_DECAY = cfg.TRAIN.WEIGHT_DECAY
+    print('weight decay',W_DECAY)
 
     my_dataset = MyDataset(imgs_csv=cfg.TRAIN.IMGS_CSV,rois_csv=cfg.TRAIN.ROIS_CSV,
     root_dir=cfg.TRAIN.ROOT_DIR, ther_path=cfg.TRAIN.THERMAL_PATH,transform = full_transform)
@@ -119,14 +122,15 @@ def train():
     MSDN_net = MyMSDN()
     MSDN_net.to(cfg.DEVICE)
 
-    pretrain = 'models/MSDN/model6/model6_lr_1e-3_bz_4_NBS_128_norm_epoch_3.pth'
-    print('pretrain: ' + pretrain)
-    MSDN_net.load_state_dict(torch.load(pretrain))
+    #load pretrain model
+    # pretrain = 'models/MSDN/model8/model8_lr_1e-3_bz_2_fixed_epoch_4.pth'
+    # print('pretrain: ' + pretrain)
+    # MSDN_net.load_state_dict(torch.load(pretrain))
 
     criterion = nn.MSELoss()
-    optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT)
+    optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT,weight_decay=W_DECAY)
 
-    f = open('models/MSDN/model8/log8.txt','a')
+    f = open('models/MSDN/model10/log10.txt','a')
     for epoch in range(max_epoch):  # Lặp qua bộ dữ liệu huấn luyện nhiều lần
         running_loss = 0.0
         st = time.time()
@@ -142,8 +146,6 @@ def train():
             bbox_label,bbox_targets,bbox_inside_weights,bbox_outside_weights = bbox_label.to(cfg.DEVICE),bbox_targets.to(cfg.DEVICE),bbox_inside_weights.to(cfg.DEVICE),bbox_outside_weights.to(cfg.DEVICE)
 
             sam = sample['image']
-
-            # bbb = sample['bb']
 
             num=bbb.size(1)
             bbb=bbb.view(-1, 5)
@@ -169,14 +171,14 @@ def train():
             optimizer.step()
 
             running_loss += loss.item()
-            if i % 10 == 9:    # In mỗi 2000 mini-batches.
+            if i % 10 == 9:    # In mỗi 10 mini-batches.
                 text = '[{}, {}] loss: {:.3f}  time: {:.3f}'.format(epoch + 1, i + 1, running_loss / 10,time.time()-st)
                 print(text)
                 #write txt file
                 f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        name_model = 'models/MSDN/model8/model8_lr_1e-4_bz_4_NBS_128_norm_epoch_{}.pth'.format(epoch)
+        name_model = 'models/MSDN/model10/model10_lr_1e-3_bz_2_decay_epoch_{}.pth'.format(epoch)
         torch.save(MSDN_net.state_dict(), name_model)
     f.close()
     print('model saved: ' + name_model)
@@ -200,14 +202,14 @@ def test():
 
     MSDN_net = MyMSDN()
     MSDN_net.to(cfg.DEVICE)
-    pretrain = 'models/MSDN/model7/model7_lr_1e-4_bz_4_NBS_128_norm_epoch_0.pth'
+    pretrain = 'models/MSDN/model8/model8_lr_1e-3_bz_2_fixed_epoch_4.pth'
     print('pretrain: ' + pretrain)
     MSDN_net.load_state_dict(torch.load(pretrain))
 
     running_loss = 0.0
     st = time.time()
 
-    f = open('mymodel/MSDN/test/test_model7_lr_1e-4_bz_2_sco_05_epoch_0.txt','a')
+    f = open('mymodel/MSDN/test/test_model8_lr_1e-3_bz_2_sco_05_epoch_4.txt','a')
     for i, sample in enumerate(dataloader):
         print(sample['img_info'])
         label = sample['label']

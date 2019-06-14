@@ -247,7 +247,7 @@ if __name__ == '__main__':
 
     # print('./models/model14/log14.txt')
     # true_txt = './mymodel/RRN/log24.txt'
-    true_txt = './models/MSDN/model7/log7.txt'
+    true_txt = './models/MSDN/model8/log8.txt'
 
     # # test_txt = './test2_model21_epoch7.txt'
     visualizeErrorLoss(true_txt,ylabel='Multi-loss loss',title='MSDN (Unfreeze)',step=100)
