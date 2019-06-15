@@ -123,9 +123,9 @@ def train():
     MSDN_net.to(cfg.DEVICE)
 
     #load pretrain model
-    # pretrain = 'models/MSDN/model8/model8_lr_1e-3_bz_2_fixed_epoch_4.pth'
-    # print('pretrain: ' + pretrain)
-    # MSDN_net.load_state_dict(torch.load(pretrain))
+    pretrain = 'models/MSDN/model10/model10_lr_1e-3_bz_2_decay_epoch_4.pth'
+    print('pretrain: ' + pretrain)
+    MSDN_net.load_state_dict(torch.load(pretrain))
 
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT,weight_decay=W_DECAY)
@@ -178,7 +178,7 @@ def train():
                 f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        name_model = 'models/MSDN/model10/model10_lr_1e-3_bz_2_decay_epoch_{}.pth'.format(epoch)
+        name_model = 'models/MSDN/model10/model10_lr_1e-4_bz_2_decay_epoch_{}.pth'.format(epoch)
         torch.save(MSDN_net.state_dict(), name_model)
     f.close()
     print('model saved: ' + name_model)
@@ -202,14 +202,14 @@ def test():
 
     MSDN_net = MyMSDN()
     MSDN_net.to(cfg.DEVICE)
-    pretrain = 'models/MSDN/model8/model8_lr_1e-3_bz_2_fixed_epoch_4.pth'
+    pretrain = 'models/MSDN/model10/model10_lr_1e-4_bz_2_decay_epoch_3.pth'
     print('pretrain: ' + pretrain)
     MSDN_net.load_state_dict(torch.load(pretrain))
 
     running_loss = 0.0
     st = time.time()
 
-    f = open('mymodel/MSDN/test/test_model8_lr_1e-3_bz_2_sco_05_epoch_4.txt','a')
+    f = open('mymodel/MSDN/test/test_model10_lr_1e-4_bz_2_decay_epoch_3.txt','a')
     for i, sample in enumerate(dataloader):
         print(sample['img_info'])
         label = sample['label']
@@ -281,7 +281,6 @@ def test():
             # print(cls_dets)
         else:
             cls_dets = torch.Tensor([[],[],[],[],[]]).permute(1,0)
-
 
         print('writing image {}'.format(i+1))
         if cls_dets.numel() > 0:

@@ -39,7 +39,7 @@ __C.TRAIN.IMGS_CSV = 'mydata/imgs_train.csv'
 __C.TRAIN.ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
 
 # Initial learning rate
-__C.TRAIN.LEARNING_RATE = 1e-3
+__C.TRAIN.LEARNING_RATE = 1e-4
 
 # Momentum
 __C.TRAIN.MOMENTUM = 0.9
