@@ -95,7 +95,7 @@ def createTarget(label,bbb,gt_rois):
 
     return label,bbox_targets,bbox_inside_weights,bbox_outside_weights
 
-def train():
+def train(pretrain):
     print('TRAINING MSDN...')
 
     full_transform=transforms.Compose([RandomHorizontalFlip(),
@@ -123,14 +123,14 @@ def train():
     MSDN_net.to(cfg.DEVICE)
 
     #load pretrain model
-    pretrain = 'models/MSDN/model10/model10_lr_1e-3_bz_2_decay_epoch_4.pth'
-    print('pretrain: ' + pretrain)
-    MSDN_net.load_state_dict(torch.load(pretrain))
+    if pretrain is not None:
+        print('pretrain: ' + pretrain)
+        MSDN_net.load_state_dict(torch.load(pretrain))
 
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT,weight_decay=W_DECAY)
 
-    f = open('models/MSDN/model10/log10.txt','a')
+    f = open('models/MSDN/model11/log11.txt','a')
     for epoch in range(max_epoch):  # Lặp qua bộ dữ liệu huấn luyện nhiều lần
         running_loss = 0.0
         st = time.time()
@@ -178,13 +178,13 @@ def train():
                 f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        name_model = 'models/MSDN/model10/model10_lr_1e-4_bz_2_decay_epoch_{}.pth'.format(epoch)
+        name_model = 'models/MSDN/model11/model11_lr_1e-4_bz_2_decay_epoch_{}.pth'.format(epoch)
         torch.save(MSDN_net.state_dict(), name_model)
     f.close()
     print('model saved: ' + name_model)
     print('Huấn luyện xong')
 
-def test():
+def test(pretrain):
     print('TESTING MSDN...')
     full_transform=transforms.Compose([ToTensor(),
                                        Normalize(cfg.BGR_MEAN,cfg.BGR_STD)])
@@ -202,14 +202,15 @@ def test():
 
     MSDN_net = MyMSDN()
     MSDN_net.to(cfg.DEVICE)
-    pretrain = 'models/MSDN/model10/model10_lr_1e-4_bz_2_decay_epoch_3.pth'
+
     print('pretrain: ' + pretrain)
     MSDN_net.load_state_dict(torch.load(pretrain))
 
     running_loss = 0.0
     st = time.time()
 
-    f = open('mymodel/MSDN/test/test_model10_lr_1e-4_bz_2_decay_epoch_3.txt','a')
+    test_file = 'mymodel/MSDN/test/test_{}.txt'.format(pretrain.split('/')[-1])
+    f = open(test_file,'a')
     for i, sample in enumerate(dataloader):
         print(sample['img_info'])
         label = sample['label']
@@ -292,6 +293,7 @@ def test():
                 # if w > 0 and h >= cfg.TEST.MIN_HEIGHT and h <= cfg.TEST.MAX_HEIGHT:
                 f.write('{id},{l:9.3f},{t:9.3f},{w:9.3f},{h:9.3f},{s:9.3f}\n'.format(id=i+1,l=l,t=t,w=w,h=h,s=s*100))
     f.close()
+    print('Test result saved at {}'.format(test_file))
 
 def parse_args():
     """
@@ -304,11 +306,12 @@ def parse_args():
     return args
 if __name__ == '__main__':
     args = parse_args()
+    pretrain = 'models/MSDN/model10/model10_lr_1e-4_bz_2_decay_epoch_4.pth'
 
     if args.test:
-        test()
+        test(pretrain)
     else:
-        train()
+        train(pretrain)
 
     # cls, pros = torch.load('out_MSDN_test.pth')
     # print(cls.size())

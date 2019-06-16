@@ -48,7 +48,7 @@ __C.TRAIN.MOMENTUM = 0.9
 __C.TRAIN.WEIGHT_DECAY = 0.0005
 
 # Minibatch size (number of regions of interest [ROIs])
-__C.TRAIN.BATCH_SIZE = 2
+__C.TRAIN.BATCH_SIZE = 1
 
 #shuffle dataset
 __C.TRAIN.SHUFFLE = True
@@ -57,11 +57,11 @@ __C.TRAIN.SHUFFLE = True
 __C.TRAIN.NUM_WORKERS = 24
 
 #unfeeze RRN parameters
-__C.TRAIN.FREEZE_RRN = True
+__C.TRAIN.FREEZE_RRN = False
 
 
 #maximum epoch
-__C.TRAIN.MAX_EPOCH = 5
+__C.TRAIN.MAX_EPOCH = 10
 
 #maximum rois in ground-truth
 __C.TRAIN.MAX_GTS = 9

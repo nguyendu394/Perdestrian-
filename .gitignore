@@ -8,6 +8,7 @@
 ./mydata/Dets_TrainKaist_Thr70.csv
 ./models/
 ./models/*.ptx
+
 *.ptx
 *.pth
 ./models/*.pth
