@@ -59,39 +59,45 @@ class MyDataset(Dataset):
 
         tm = cv2.imread(os.path.join(self.ther_path,self.imgs.iloc[idx,0].replace('visible','lwir')),0)
 
-        #create ground-truth
-
-        gt_boxes = []
-        with open(gt_name,'r') as f:
-            data = f.readlines()
-        for i in range(1,len(data)):
-            d = data[i].split()
-            #x1,x2,y1,y2,cls
-            temp = [float(d[1]),float(d[2]),float(d[1])+float(d[3]),float(d[2])+float(d[4]),1]
-            gt_boxes.append(temp)
-
-        all_rois = getAllrois(bbs[:,:-1], gt_boxes)
-        all_rois = torch.from_numpy(all_rois)
-        #padding ground-truth
         if self.train:
+            #create ground-truth
+            gt_boxes = []
+            with open(gt_name,'r') as f:
+                data = f.readlines()
+            for i in range(1,len(data)):
+                d = data[i].split()
+                #x1,x2,y1,y2,cls
+                temp = [float(d[1]),float(d[2]),float(d[1])+float(d[3]),float(d[2])+float(d[4]),1]
+                gt_boxes.append(temp)
+
+            all_rois = getAllrois(bbs[:,:-1], gt_boxes)
+            all_rois = torch.from_numpy(all_rois)
+            #padding ground-truth
             gt_boxes_padding = getGTboxesPadding(gt_boxes,cfg.TRAIN.MAX_GTS)
+            gt_boxes_padding = torch.from_numpy(gt_boxes_padding)
+            # print('Size of all ROIS', all_rois.size())
+
+            fg_rois_per_image = int(np.round(cfg.TRAIN.FG_FRACTION * cfg.TRAIN.ROI_PER_IMAGE))
+            fg_rois_per_image = 1 if fg_rois_per_image == 0 else fg_rois_per_image
+            label,rois,gt_rois = sample_rois_tensor(all_rois, gt_boxes_padding, fg_rois_per_image, cfg.TRAIN.ROI_PER_IMAGE, cfg.NUM_CLASSES)
+
+            sample = {'img_info':img_name,
+                      'image': image,
+                      'label': label,
+                      'bb': rois.numpy(),
+                      'tm': tm,
+                      'gt': gt_boxes_padding.numpy(),
+                      'gt_roi': gt_rois
+                      }
         else:
-            gt_boxes_padding = getGTboxesPadding(gt_boxes,cfg.TEST.MAX_GTS)
-        gt_boxes_padding = torch.from_numpy(gt_boxes_padding)
-        # print('Size of all ROIS', all_rois.size())
-
-        fg_rois_per_image = int(np.round(cfg.TRAIN.FG_FRACTION * cfg.TRAIN.ROI_PER_IMAGE))
-        fg_rois_per_image = 1 if fg_rois_per_image == 0 else fg_rois_per_image
-        label,rois,gt_rois = sample_rois_tensor(all_rois, gt_boxes_padding, fg_rois_per_image, cfg.TRAIN.ROI_PER_IMAGE, cfg.NUM_CLASSES)
-
-        sample = {'img_info':img_name,
-                  'image': image,
-                  'label': label,
-                  'bb': rois.numpy(),
-                  'tm': tm,
-                  'gt': gt_boxes_padding.numpy(),
-                  'gt_roi': gt_rois
-                  }
+            sample = {'img_info':img_name,
+                      'image': image,
+                      'label': torch.zeros([1,1]),
+                      'bb': bbs[:,:-1],
+                      'tm': tm,
+                      'gt': np.zeros([1,1]),
+                      'gt_roi': torch.zeros([1,1]),
+                      }
 
         if self.transform:
             sample = self.transform(sample)
@@ -105,14 +111,13 @@ def getSampleDataset(id = None,bz=1,p=0.5,trans=True,train=True):
         output: (dict) sample {'image','bb','tm','img_info','gt'}
 
         '''
-    # THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
-    # ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
-    # IMGS_CSV = 'mydata/imgs_train.csv'
-    # ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
-    full_transform=transforms.Compose([RandomHorizontalFlip(p),
-                                       ToTensor(),
-                                       # my_normalize()])
-                                       Normalize(cfg.BGR_MEAN,cfg.BGR_STD)])
+    if train:
+        full_transform=transforms.Compose([RandomHorizontalFlip(p),
+                                           ToTensor(),
+                                           Normalize(cfg.BGR_MEAN,cfg.BGR_STD)])
+    else:
+        full_transform=transforms.Compose([ToTensor(),
+                                           Normalize(cfg.BGR_MEAN,cfg.BGR_STD)])
     if trans is False:
         full_transform = None
 

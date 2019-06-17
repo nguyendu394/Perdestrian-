@@ -173,29 +173,15 @@ def testNMS(bbs):
 
 def main():
     pre = 'mymodel/RRN/model27_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'
-    # sample = getSampleDataset(id = 2027,train=True,bz=1)
-    sample = getSampleDataset(train=True,bz=1)
+    sample = getSampleDataset(id = 34974,train=False,bz=1)
+    # sample = getSampleDataset(train=False,bz=1)
 
-    # print(sample['bb'])
-    # testDataset(sample,drawgt=False)
+    print(sample['img_info'])
+    print(sample['bb'].size())
+    # testDataset(sample,drawgt=True)
     # testROIpool(sample)
-    testResizeThermal(sample)
+    # testResizeThermal(sample)
     # testRRN_Pretrain(sample, pre)
 if __name__ == '__main__':
     main()
-    # cls_dets = torch.Tensor([[],[],[],[],[]]).permute(1,0)
-    # print(cls_dets)
-    # print(cls_dets.numel())
-    #
-    #
-    # print(a)
-    # print(a[1,:,0::4].clamp_(0, im_shape[i, 1]-1))
-    # a = torch.randn(2,3,4)
-    # print(a)
-    # print(a.reshape(-1))
-    # b = a.view(1,6,5)
-    # print(b)
-    # x = a.numpy()
-    # b = torch.randn(3)
-    # y = b.numpy()
-    # print(x.size)
+    #34975 ['/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test/set10_V000_visible_I02300.jpg']

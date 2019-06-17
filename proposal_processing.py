@@ -81,57 +81,6 @@ def bbox_overlaps(anchors, gt_boxes):
 
     return overlaps
 
-# def bbox_transform(ex_rois, gt_rois):
-    """
-    computes the distance from ground-truth boxes to the given boxes, normed by their size
-    :param ex_rois: n * 4 numpy array, given boxes
-    :param gt_rois: n * 4 numpy array, ground-truth boxes
-    :return: deltas: n * 4 numpy array, ground-truth boxes
-    """
-    ex_widths = ex_rois[:, 2] - ex_rois[:, 0] + 1.0
-    ex_heights = ex_rois[:, 3] - ex_rois[:, 1] + 1.0
-    ex_ctr_x = ex_rois[:, 0] + 0.5 * ex_widths
-    ex_ctr_y = ex_rois[:, 1] + 0.5 * ex_heights
-
-    # assert np.min(ex_widths) > 0.1 and np.min(ex_heights) > 0.1, \
-    #     'Invalid boxes found: {} {}'. \
-    #         format(ex_rois[np.argmin(ex_widths), :], ex_rois[np.argmin(ex_heights), :])
-
-    gt_widths = gt_rois[:, 2] - gt_rois[:, 0] + 1.0
-    gt_heights = gt_rois[:, 3] - gt_rois[:, 1] + 1.0
-    gt_ctr_x = gt_rois[:, 0] + 0.5 * gt_widths
-    gt_ctr_y = gt_rois[:, 1] + 0.5 * gt_heights
-
-    targets_dx = (gt_ctr_x - ex_ctr_x) / ex_widths
-    targets_dy = (gt_ctr_y - ex_ctr_y) / ex_heights
-    targets_dw = np.log(gt_widths / ex_widths)
-    targets_dh = np.log(gt_heights / ex_heights)
-
-    targets = np.vstack(
-        (targets_dx, targets_dy, targets_dw, targets_dh)).transpose()
-    return targets
-
-# def bbox_transform_tensor(ex_rois, gt_rois):
-    ex_widths = ex_rois[:, 2] - ex_rois[:, 0] + 1.0
-    ex_heights = ex_rois[:, 3] - ex_rois[:, 1] + 1.0
-    ex_ctr_x = ex_rois[:, 0] + 0.5 * ex_widths
-    ex_ctr_y = ex_rois[:, 1] + 0.5 * ex_heights
-
-    gt_widths = gt_rois[:, 2] - gt_rois[:, 0] + 1.0
-    gt_heights = gt_rois[:, 3] - gt_rois[:, 1] + 1.0
-    gt_ctr_x = gt_rois[:, 0] + 0.5 * gt_widths
-    gt_ctr_y = gt_rois[:, 1] + 0.5 * gt_heights
-
-    targets_dx = (gt_ctr_x - ex_ctr_x) / ex_widths
-    targets_dy = (gt_ctr_y - ex_ctr_y) / ex_heights
-    targets_dw = torch.log(gt_widths / ex_widths)
-    targets_dh = torch.log(gt_heights / ex_heights)
-
-    targets = torch.stack(
-        (targets_dx, targets_dy, targets_dw, targets_dh),1)
-
-    return targets.float()
-
 def bbox_transform_batch(ex_rois, gt_rois):
 
     if ex_rois.dim() == 2:
@@ -212,28 +161,6 @@ def compute_targets_pytorch(ex_rois, gt_rois):
 
     return targets
 
-# def _get_bbox_regression_labels(bbox_target_data, num_classes):
-    """Bounding-box regression targets (bbox_target_data) are stored in a
-    compact form N x (class, tx, ty, tw, th)
-    This function expands those targets into the 4-of-4*K representation used
-    by the network (i.e. only one class has non-zero targets).
-    Returns:
-        bbox_target (ndarray): N x 4K blob of regression targets
-        bbox_inside_weights (ndarray): N x 4K blob of loss weights
-    """
-    BBOX_INSIDE_WEIGHTS = (1.0,1.0,1.0,1.0)
-    clss = bbox_target_data[:, 0]
-    bbox_targets = np.zeros((clss.size, 4 * num_classes), dtype=np.float32)
-    bbox_inside_weights = np.zeros(bbox_targets.shape, dtype=np.float32)
-    inds = np.where(clss > 0)[0]
-    for ind in inds:
-        cls = int(clss[ind])
-        start = 4 * cls
-        end = start + 4
-        bbox_targets[ind, start:end] = bbox_target_data[ind, 1:]
-        bbox_inside_weights[ind, start:end] = BBOX_INSIDE_WEIGHTS
-    return bbox_targets, bbox_inside_weights
-
 def get_bbox_regression_labels_pytorch(bbox_target_data, labels_batch, num_classes=2):
     """Bounding-box regression targets (bbox_target_data) are stored in a
     compact form b x N x (class, tx, ty, tw, th)
@@ -262,63 +189,6 @@ def get_bbox_regression_labels_pytorch(bbox_target_data, labels_batch, num_class
             bbox_inside_weights[b, ind, :] = BBOX_INSIDE_WEIGHTS
 
     return bbox_targets, bbox_inside_weights
-
-# def sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_classes):
-    """Generate a random sample of RoIs comprising foreground and background
-    examples.
-    """
-    # overlaps: R x G
-    overlaps = bbox_overlaps(all_rois[:,1:], gt_boxes[:,:-1])
-    # print(overlaps)
-    overlaps = overlaps.numpy()
-    gt_assignment = overlaps.argmax(axis=1)  # R
-    max_overlaps = overlaps.max(axis=1)  # R
-
-    labels = gt_boxes[gt_assignment, 4]
-    # print('labels')
-    # print(labels)
-    # Select foreground RoIs as those with >= FG_THRESH overlap
-    fg_inds = np.where(max_overlaps >= 0.5)[0]
-    # fg_inds = np.setdiff1d(fg_inds, ignore_inds)
-    # Guard against the case when an image has fewer than fg_rois_per_image
-    # foreground RoIs
-    fg_rois_per_this_image = min(fg_rois_per_image, fg_inds.size)
-    # Sample foreground regions without replacement
-    if fg_inds.size > 0:
-        # fg_inds = np.random.choice(fg_inds, size=fg_rois_per_this_image, replace=False)
-        fg_inds = fg_inds[:fg_rois_per_this_image]
-    # print('fg_inds')
-    # print(fg_inds)
-    # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
-    bg_inds = np.where((max_overlaps < 0.5) &
-                       (max_overlaps >= 0))[0]
-    # bg_inds = np.setdiff1d(bg_inds, ignore_inds)
-    # Compute number of background RoIs to take from this image (guarding
-    # against there being fewer than desired)
-    bg_rois_per_this_image = rois_per_image - fg_rois_per_this_image
-    bg_rois_per_this_image = min(bg_rois_per_this_image, bg_inds.size)
-    # Sample background regions without replacement
-    if bg_inds.size > 0:
-        # bg_inds = np.random.choice(bg_inds, size=bg_rois_per_this_image, replace=False)
-        bg_inds = bg_inds[:bg_rois_per_this_image]
-
-    # print('bg_inds')
-    # print(bg_inds)
-    # The indices that we're selecting (both fg and bg)
-    keep_inds = np.append(fg_inds, bg_inds)
-    # Select sampled values from various arrays:
-    labels = labels[keep_inds]
-    # Clamp labels for the background RoIs to 0
-    labels[fg_rois_per_this_image:] = 0
-    rois = all_rois[keep_inds]
-    gt_rois = gt_boxes[gt_assignment[keep_inds]]
-    # bbox_target_data = compute_targets(rois[:, 1:5], gt_rois[:,:4], labels)
-
-    # bbox_target_data (1 x H x W x A, 5)
-    # bbox_targets <- (1 x H x W x A, K x 4)
-    # bbox_inside_weights <- (1 x H x W x A, K x 4)
-    # bbox_targets, bbox_inside_weights = _get_bbox_regression_labels(bbox_target_data, num_classes=2)
-    return labels, rois, gt_rois
 
 def sample_rois_tensor(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_classes):
     """Generate a random sample of RoIs comprising foreground and background

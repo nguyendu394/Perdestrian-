@@ -209,89 +209,84 @@ def test(pretrain):
     running_loss = 0.0
     st = time.time()
 
-    test_file = 'mymodel/MSDN/test/test_{}.txt'.format(pretrain.split('/')[-1])
+    test_file = 'mymodel/MSDN/test/AAAtest_{}.txt'.format(pretrain.split('/')[-1])
     f = open(test_file,'a')
-    for i, sample in enumerate(dataloader):
-        print(sample['img_info'])
-        label = sample['label']
-        bbb = sample['bb']
-        gt_rois = sample['gt_roi']
+    with torch.no_grad():
+        for i, sample in enumerate(dataloader):
+            print(sample['img_info'])
+            # label = sample['label']
+            sam = sample['image']
+            bbb = sample['bb']
+            print(bbb.size())
+            # gt_rois = sample['gt_roi']
 
-        # label,bbb,gt_rois = label.to(cfg.DEVICE),bbb.to(cfg.DEVICE),gt_rois.to(cfg.DEVICE)
+            boxes = bbb[:, :, 1:5].to(cfg.DEVICE)
+            # print('boxes of size', boxes)
+            # bbb = sample['bb']
 
-        bbox_label,bbox_targets,bbox_inside_weights,bbox_outside_weights = createTarget(label,bbb,gt_rois)
+            num=bbb.size(1)
+            bbb=bbb.view(-1, 5)
 
-        bbox_label,bbox_targets,bbox_inside_weights,bbox_outside_weights = bbox_label.to(cfg.DEVICE),bbox_targets.to(cfg.DEVICE),bbox_inside_weights.to(cfg.DEVICE),bbox_outside_weights.to(cfg.DEVICE)
+            bbb[:,0] = 0
+            sam = sam.to(cfg.DEVICE)
+            bbb = bbb.to(cfg.DEVICE)
 
+            cls_score, bbox_pred = MSDN_net.forward(sam,bbb)
+            # sam,bbb = sam.cpu(),bbb.cpu()
 
-        sam = sample['image']
-        boxes = bbb[:, :, 1:5].to(cfg.DEVICE)
-        # print('boxes of size', boxes)
-        # bbb = sample['bb']
+            scores = F.softmax(cls_score).detach()
+            # print('score of size', scores.shape)
 
-        num=bbb.size(1)
-        bbb=bbb.view(-1, 5)
+            if cfg.TEST.BBOX_REG:
+                # Apply bounding-box regression deltas
+                box_deltas = bbox_pred.detach()
+                if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
+                    # Optionally normalize targets by a precomputed mean and stdev
+                    box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).to(cfg.DEVICE) \
+                               + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).to(cfg.DEVICE)
+                    box_deltas = box_deltas.view(1, -1, 4)
 
-        ind = torch.arange(params['batch_size'],requires_grad=False).view(-1,1)
-        ind = ind.repeat(1,num).view(-1,1)
-        bbb[:,0] = ind[:,0]
-        sam = sam.to(cfg.DEVICE)
-        bbb = bbb.to(cfg.DEVICE)
+                pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
+                # print(pred_boxes)
+                pred_boxes = clip_boxes(pred_boxes, 1)
+            else:
+                # Simply repeat the boxes, once for each class
+                pred_boxes = np.tile(boxes, (1, scores.shape[1]))
 
-        cls_score, bbox_pred = MSDN_net(sam,bbb)
+            #clear all dimension 1
+            scores = scores.squeeze()
+            pred_boxes = pred_boxes.squeeze()
+            # print(scores.shape)
+            # print(pred_boxes.shape)
 
-        scores = F.softmax(cls_score).detach()
-        # print('score of size', scores.shape)
+            inds = torch.nonzero(scores[:,1]>cfg.TEST.THRESS).view(-1)
+            # print(inds)
+            if inds.numel() > 0:
+                # print(scores)
+                cls_scores = scores[:,1][inds]
+                # print(cls_score.shape)
+                _, order = torch.sort(cls_scores, 0, True)
+                cls_boxes = pred_boxes[inds, :]
+                # print(cls_boxes.shape)
+                cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1)), 1)
+                cls_dets = cls_dets[order]
+                # print(cls_dets)
+                keep = nms(cls_boxes[order, :], cls_scores[order], cfg.TEST.NMS)
+                cls_dets = cls_dets[keep.view(-1).long()]
+                # print(cls_dets)
+            else:
+                cls_dets = torch.Tensor([[],[],[],[],[]]).permute(1,0)
 
-        if cfg.TEST.BBOX_REG:
-            # Apply bounding-box regression deltas
-            box_deltas = bbox_pred.detach()
-            if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
-                # Optionally normalize targets by a precomputed mean and stdev
-                box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).to(cfg.DEVICE) \
-                           + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).to(cfg.DEVICE)
-                box_deltas = box_deltas.view(1, -1, 4)
-
-            pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
-            # print(pred_boxes)
-            pred_boxes = clip_boxes(pred_boxes, 1)
-        else:
-            # Simply repeat the boxes, once for each class
-            pred_boxes = np.tile(boxes, (1, scores.shape[1]))
-
-        #clear all dimension 1
-        scores = scores.squeeze()
-        pred_boxes = pred_boxes.squeeze()
-        # print(scores.shape)
-        # print(pred_boxes.shape)
-
-        inds = torch.nonzero(scores[:,1]>cfg.TEST.THRESS).view(-1)
-        # print(inds)
-        if inds.numel() > 0:
-            # print(scores)
-            cls_scores = scores[:,1][inds]
-            # print(cls_score.shape)
-            _, order = torch.sort(cls_scores, 0, True)
-            cls_boxes = pred_boxes[inds, :]
-            # print(cls_boxes.shape)
-            cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1)), 1)
-            cls_dets = cls_dets[order]
-            # print(cls_dets)
-            keep = nms(cls_boxes[order, :], cls_scores[order], cfg.TEST.NMS)
-            cls_dets = cls_dets[keep.view(-1).long()]
-            # print(cls_dets)
-        else:
-            cls_dets = torch.Tensor([[],[],[],[],[]]).permute(1,0)
-
-        print('writing image {}'.format(i+1))
-        if cls_dets.numel() > 0:
-            bbs = cls_dets.cpu().detach().numpy()
-            for bb in bbs:
-                l,t,r,b,s = bb
-                w = r-l
-                h = b-t
-                # if w > 0 and h >= cfg.TEST.MIN_HEIGHT and h <= cfg.TEST.MAX_HEIGHT:
-                f.write('{id},{l:9.3f},{t:9.3f},{w:9.3f},{h:9.3f},{s:9.3f}\n'.format(id=i+1,l=l,t=t,w=w,h=h,s=s*100))
+            print('writing image {}'.format(i+1))
+            if cls_dets.numel() > 0:
+                bbs = cls_dets.cpu().detach().numpy()
+                for bb in bbs:
+                    l,t,r,b,s = bb
+                    w = r-l
+                    h = b-t
+                    # if w > 0 and h >= cfg.TEST.MIN_HEIGHT and h <= cfg.TEST.MAX_HEIGHT:
+                    f.write('{id},{l:9.3f},{t:9.3f},{w:9.3f},{h:9.3f},{s:9.3f}\n'.format(id=i+1,l=l,t=t,w=w,h=h,s=s*100))
+            # torch.cuda.empty_cache()
     f.close()
     print('Test result saved at {}'.format(test_file))
 
@@ -306,7 +301,7 @@ def parse_args():
     return args
 if __name__ == '__main__':
     args = parse_args()
-    pretrain = 'models/MSDN/model10/model10_lr_1e-4_bz_2_decay_epoch_4.pth'
+    pretrain = 'models/MSDN/model10/model10_lr_1e-4_bz_2_decay_epoch_2.pth'
 
     if args.test:
         test(pretrain)

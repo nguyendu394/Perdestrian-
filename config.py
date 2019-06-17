@@ -57,7 +57,7 @@ __C.TRAIN.SHUFFLE = True
 __C.TRAIN.NUM_WORKERS = 24
 
 #unfeeze RRN parameters
-__C.TRAIN.FREEZE_RRN = False
+__C.TRAIN.FREEZE_RRN = True
 
 
 #maximum epoch
