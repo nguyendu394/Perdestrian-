@@ -8,6 +8,7 @@ from image_processing import convertTensor2Img, visualizeRP,resizeThermal
 from RRN import MyRRN
 import torchvision.ops.roi_pool as ROIPool
 from torchvision.ops import nms
+from config import cfg
 
 def testDataset(sample,drawgt=None):
     print(sample['img_info'])
@@ -179,8 +180,8 @@ def main():
     # print(sample['bb'])
     # testDataset(sample,drawgt=False)
     # testROIpool(sample)
-    testResizeThermal(sample)
-    # testRRN_Pretrain(sample, pre)
+    # testResizeThermal(sample)
+    testRRN_Pretrain(sample, pre)
 if __name__ == '__main__':
     main()
     # cls_dets = torch.Tensor([[],[],[],[],[]]).permute(1,0)

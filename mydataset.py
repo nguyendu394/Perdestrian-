@@ -22,6 +22,7 @@ import torch.nn.functional as F
 # from image_processing import convertTensor2Img, showBbs,visualizeRP, resizeThermal, flipBoundingBox
 # import torch.nn as nn
 # Ignore warnings
+from config import cfg
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -105,13 +106,9 @@ def getSampleDataset(id = None,bz=1,p=0.5,trans=True,train=True):
         output: (dict) sample {'image','bb','tm','img_info','gt'}
 
         '''
-    # THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train_tm/'
-    # ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/images_train'
-    # IMGS_CSV = 'mydata/imgs_train.csv'
-    # ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
+
     full_transform=transforms.Compose([RandomHorizontalFlip(p),
                                        ToTensor(),
-                                       # my_normalize()])
                                        Normalize(cfg.BGR_MEAN,cfg.BGR_STD)])
     if trans is False:
         full_transform = None
@@ -151,10 +148,7 @@ if __name__ == '__main__':
     label = sample['label']
     rois = sample['bb']
     gt_rois = sample['gt_roi']
-    # exit()
-    #
-    # print('='*10)
-    # bbox_target_data = compute_targets(rois[:,1:5],gt_rois[:,:4],label)
+
     #
     label = label.expand(1,128)
     rois = rois.expand(1,128,5)
@@ -165,12 +159,7 @@ if __name__ == '__main__':
     print(bbox_target_data[0,0])
 
     exit()
-    # bbox_targets, bbox_inside_weights = get_bbox_regression_labels_pytorch(bbox_target_data, label, num_classes=2)
-    # #
-    # print('=========')
-    # print(bbox_targets.size())
-    # print(bbox_inside_weights.size())
-    # print(bbox_targets)
+
 
     bbox_outside_weights = (bbox_inside_weights > 0).float()
     # print(bbox_outside_weights.size())

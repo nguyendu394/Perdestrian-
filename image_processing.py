@@ -82,7 +82,7 @@ def convertRoisACF2CSV(path,new):
 
     for ind,i in enumerate(data):
         id,l,t,w,h,s = i.split(',')
-        id = int(id) - 1
+        id = float(id) - 1
         r = round(float(l) + float(w),3)
         b = round(float(t) + float(h),3)
         with open(new,'a') as f:
@@ -214,8 +214,8 @@ def visualizeErrorLoss(true_txt, false_txt=None, title=' ', ylabel=' ',xlabel='i
 
 def main():
     # img = cv2.imread('I01793.jpg')
-    bbs_txt = '../ngoc/toolbox/detector/models/Dets_TestK_All_with_Kaist_Thr70.txt'
-    bbs_csv = 'mydata/rois_testKaist_thr70_MSDN.csv'
+    bbs_txt = '../ngoc/toolbox/detector/models/Dets_Train_Caltech_Thr70.txt'
+    bbs_csv = 'mydata/rois_trainCaltech_thr70_MSDN.csv'
 
     convertRoisACF2CSV(bbs_txt, bbs_csv)
 
@@ -240,14 +240,14 @@ def flipBoundingBox(img,bboxes,gts):
 
 if __name__ == '__main__':
     # createImgsFilesName('/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test', 'mydata/imgs_test.txt')
-    # main()
+    main()
     # path = 'mydata/I00000.png'
     # img1 = cv2.imread(path)
 
 
     # print('./models/model14/log14.txt')
     # true_txt = './mymodel/RRN/log24.txt'
-    true_txt = './models/MSDN/model10/log10.txt'
+    # true_txt = './models/MSDN/model11/log11.txt'
 
     # # test_txt = './test2_model21_epoch7.txt'
-    visualizeErrorLoss(true_txt,ylabel='Multi-loss loss',title='MSDN',step=100)
+    # visualizeErrorLoss(true_txt,ylabel='Multi-loss loss',title='MSDN',step=100)

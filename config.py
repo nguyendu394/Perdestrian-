@@ -9,8 +9,8 @@ __C = edict()
 # Consumers can get config by:
 cfg = __C
 
-__C.DEVICE = torch.device("cuda:0")
-# __C.DEVICE = torch.device("cpu")
+# __C.DEVICE = torch.device("cuda:0")
+__C.DEVICE = torch.device("cpu")
 
 #normalize mean std (ImageNet)
 __C.BGR_MEAN = (0.406, 0.456, 0.485)
@@ -98,9 +98,9 @@ __C.TEST = edict()
 # Scale to use during testing (can NOT list multiple scales)
 # The scale is the pixel size of an image's shortest side
 __C.TEST.THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test_tm/'
-__C.TEST.ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test'
-__C.TEST.IMGS_CSV = 'mydata/imgs_test.csv'
-__C.TEST.ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
+__C.TEST.ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/Caltech/test/images_test'
+__C.TEST.IMGS_CSV = 'mydata/imgs_test_caltech.csv'
+__C.TEST.ROIS_CSV = 'mydata/rois_trainCaltechs_thr70.csv'
 
 # Test using bounding-box regressors
 __C.TEST.BBOX_REG = True

@@ -213,16 +213,8 @@ def test(pretrain):
     f = open(test_file,'a')
     for i, sample in enumerate(dataloader):
         print(sample['img_info'])
-        label = sample['label']
+
         bbb = sample['bb']
-        gt_rois = sample['gt_roi']
-
-        # label,bbb,gt_rois = label.to(cfg.DEVICE),bbb.to(cfg.DEVICE),gt_rois.to(cfg.DEVICE)
-
-        bbox_label,bbox_targets,bbox_inside_weights,bbox_outside_weights = createTarget(label,bbb,gt_rois)
-
-        bbox_label,bbox_targets,bbox_inside_weights,bbox_outside_weights = bbox_label.to(cfg.DEVICE),bbox_targets.to(cfg.DEVICE),bbox_inside_weights.to(cfg.DEVICE),bbox_outside_weights.to(cfg.DEVICE)
-
 
         sam = sample['image']
         boxes = bbb[:, :, 1:5].to(cfg.DEVICE)
@@ -232,9 +224,7 @@ def test(pretrain):
         num=bbb.size(1)
         bbb=bbb.view(-1, 5)
 
-        ind = torch.arange(params['batch_size'],requires_grad=False).view(-1,1)
-        ind = ind.repeat(1,num).view(-1,1)
-        bbb[:,0] = ind[:,0]
+        bbb[:,0] = 0
         sam = sam.to(cfg.DEVICE)
         bbb = bbb.to(cfg.DEVICE)
 
@@ -306,13 +296,9 @@ def parse_args():
     return args
 if __name__ == '__main__':
     args = parse_args()
-    pretrain = 'models/MSDN/model10/model10_lr_1e-4_bz_2_decay_epoch_4.pth'
+    pretrain = 'models/MSDN/model11/model11_lr_1e-4_bz_2_decay_epoch_5.pth'
 
     if args.test:
         test(pretrain)
     else:
         train(pretrain)
-
-    # cls, pros = torch.load('out_MSDN_test.pth')
-    # print(cls.size())
-    # print(pros)
