@@ -36,7 +36,7 @@ __C.TRAIN.ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/im
 __C.TRAIN.IMGS_CSV = 'mydata/imgs_train.csv'
 
 #list rois data train on KAIST with ACF thres -70 csv
-__C.TRAIN.ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
+__C.TRAIN.ROIS_CSV = 'mydata/rois_trainKaist_thr80_MSDN.csv'
 
 # Initial learning rate
 __C.TRAIN.LEARNING_RATE = 1e-4
