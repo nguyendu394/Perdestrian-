@@ -122,23 +122,6 @@ def bbox_transform_batch(ex_rois, gt_rois):
 
     return targets
 
-# def compute_targets(ex_rois, gt_rois, labels):
-    """Compute bounding-box regression targets for an image."""
-
-    assert ex_rois.shape[0] == gt_rois.shape[0]
-    assert ex_rois.shape[1] == 4
-    assert gt_rois.shape[1] == 4
-
-    BBOX_NORMALIZE_TARGETS_PRECOMPUTED = True
-    BBOX_NORMALIZE_MEANS = (0.0, 0.0, 0.0, 0.0)
-    BBOX_NORMALIZE_STDS = (0.1, 0.1, 0.2, 0.2)
-
-    targets = bbox_transform(ex_rois, gt_rois)
-    if BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
-        # Optionally normalize targets by a precomputed mean and stdev
-        targets = ((targets - np.array(BBOX_NORMALIZE_MEANS)) / np.array(BBOX_NORMALIZE_STDS))
-    return np.hstack((labels[:, np.newaxis], targets)).astype(np.float32, copy=False)
-
 def compute_targets_pytorch(ex_rois, gt_rois):
     """Compute bounding-box regression targets for an image."""
 

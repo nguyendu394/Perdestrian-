@@ -211,6 +211,7 @@ def test(pretrain):
 
     test_file = 'mymodel/MSDN/test1/test70_{}.txt'.format(pretrain.split('/')[-1])
     f = open(test_file,'a')
+<<<<<<< HEAD
     with torch.no_grad():
         for i, sample in enumerate(dataloader):
             print(sample['img_info'])
@@ -286,6 +287,79 @@ def test(pretrain):
                     h = b-t
                     f.write('{id},{l:9.3f},{t:9.3f},{w:9.3f},{h:9.3f},{s:9.3f}\n'.format(id=i+1,l=l,t=t,w=w,h=h,s=s*100))
             # torch.cuda.empty_cache()
+=======
+    for i, sample in enumerate(dataloader):
+        print(sample['img_info'])
+
+        bbb = sample['bb']
+
+        sam = sample['image']
+        boxes = bbb[:, :, 1:5].to(cfg.DEVICE)
+        # print('boxes of size', boxes)
+        # bbb = sample['bb']
+
+        num=bbb.size(1)
+        bbb=bbb.view(-1, 5)
+
+        bbb[:,0] = 0
+        sam = sam.to(cfg.DEVICE)
+        bbb = bbb.to(cfg.DEVICE)
+
+        cls_score, bbox_pred = MSDN_net(sam,bbb)
+
+        scores = F.softmax(cls_score).detach()
+        # print('score of size', scores.shape)
+
+        if cfg.TEST.BBOX_REG:
+            # Apply bounding-box regression deltas
+            box_deltas = bbox_pred.detach()
+            if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
+                # Optionally normalize targets by a precomputed mean and stdev
+                box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).to(cfg.DEVICE) \
+                           + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).to(cfg.DEVICE)
+                box_deltas = box_deltas.view(1, -1, 4)
+
+            pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
+            # print(pred_boxes)
+            pred_boxes = clip_boxes(pred_boxes, 1)
+        else:
+            # Simply repeat the boxes, once for each class
+            pred_boxes = np.tile(boxes, (1, scores.shape[1]))
+
+        #clear all dimension 1
+        scores = scores.squeeze()
+        pred_boxes = pred_boxes.squeeze()
+        # print(scores.shape)
+        # print(pred_boxes.shape)
+
+        inds = torch.nonzero(scores[:,1]>cfg.TEST.THRESS).view(-1)
+        # print(inds)
+        if inds.numel() > 0:
+            # print(scores)
+            cls_scores = scores[:,1][inds]
+            # print(cls_score.shape)
+            _, order = torch.sort(cls_scores, 0, True)
+            cls_boxes = pred_boxes[inds, :]
+            # print(cls_boxes.shape)
+            cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1)), 1)
+            cls_dets = cls_dets[order]
+            # print(cls_dets)
+            keep = nms(cls_boxes[order, :], cls_scores[order], cfg.TEST.NMS)
+            cls_dets = cls_dets[keep.view(-1).long()]
+            # print(cls_dets)
+        else:
+            cls_dets = torch.Tensor([[],[],[],[],[]]).permute(1,0)
+
+        print('writing image {}'.format(i+1))
+        if cls_dets.numel() > 0:
+            bbs = cls_dets.cpu().detach().numpy()
+            for bb in bbs:
+                l,t,r,b,s = bb
+                w = r-l
+                h = b-t
+                # if w > 0 and h >= cfg.TEST.MIN_HEIGHT and h <= cfg.TEST.MAX_HEIGHT:
+                f.write('{id},{l:9.3f},{t:9.3f},{w:9.3f},{h:9.3f},{s:9.3f}\n'.format(id=i+1,l=l,t=t,w=w,h=h,s=s*100))
+>>>>>>> ecdade344649f997fc31e27bfac89e657fbce11c
     f.close()
     print('Test result saved at {}'.format(test_file))
 
@@ -300,7 +374,11 @@ def parse_args():
     return args
 if __name__ == '__main__':
     args = parse_args()
+<<<<<<< HEAD
     pretrain = 'models/MSDN/model11/model11_lr_1e-4_bz_2_decay_epoch_4.pth'
+=======
+    pretrain = 'models/MSDN/model11/model11_lr_1e-4_bz_2_decay_epoch_5.pth'
+>>>>>>> ecdade344649f997fc31e27bfac89e657fbce11c
 
     if args.test:
         test(pretrain)

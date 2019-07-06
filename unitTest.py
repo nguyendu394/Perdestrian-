@@ -8,6 +8,7 @@ from image_processing import convertTensor2Img, visualizeRP,resizeThermal
 from RRN import MyRRN
 import torchvision.ops.roi_pool as ROIPool
 from torchvision.ops import nms
+from config import cfg
 
 def testDataset(sample,drawgt=None):
     print(sample['img_info'])
@@ -197,7 +198,11 @@ def main():
     # testDataset(sample,drawgt=True)
     # testROIpool(sample)
     # testResizeThermal(sample)
+<<<<<<< HEAD
     # testRRN_Pretrain(sample, pre)
+=======
+    testRRN_Pretrain(sample, pre)
+>>>>>>> ecdade344649f997fc31e27bfac89e657fbce11c
 if __name__ == '__main__':
     main()
     #34975 ['/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test/set10_V000_visible_I02300.jpg']
