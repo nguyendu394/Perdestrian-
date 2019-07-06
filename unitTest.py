@@ -173,11 +173,27 @@ def testNMS(bbs):
 
 def main():
     pre = 'mymodel/RRN/model27_lr_1e-6_bz_6_NBS_128_norm_epoch_9.pth'
-    sample = getSampleDataset(id = 34974,train=False,bz=1)
     # sample = getSampleDataset(train=False,bz=1)
+    dataiter = getSampleDataset(train=True,bz=1)
+    for sample in dataiter:
+        name = sample['img_info']
+        img = sample['image']
 
-    print(sample['img_info'])
-    print(sample['bb'].size())
+        gt = sample['gt']
+        gt = gt.cpu()
+        gt = gt.view(-1,5)
+        gt = gt.detach().numpy()
+
+        img = convertTensor2Img(img)
+        img = visualizeRP(img, bbs=None,gt=gt)
+
+        cv2.imshow('A',img)
+        cv2.waitKey()
+        # input('Enter to next image')
+    cv2.destroyAllWindows()
+
+    # print(sample['img_info'])
+    # print(sample['bb'].size())
     # testDataset(sample,drawgt=True)
     # testROIpool(sample)
     # testResizeThermal(sample)

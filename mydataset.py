@@ -135,12 +135,14 @@ def getSampleDataset(id = None,bz=1,p=0.5,trans=True,train=True):
     print(my_dataset.__len__())
     dataloader = DataLoader(my_dataset, **params)
 
-    if not id:
-        dataiter = iter(dataloader)
-        return dataiter.next()
-    else:
-        return my_dataset[id]
+    dataiter = iter(dataloader)
+    return dataiter
 
+    # if not id:
+    #     dataiter = iter(dataloader)
+    #     return dataiter.next()
+    # else:
+    #     return my_dataset[id]
 
 
 if __name__ == '__main__':

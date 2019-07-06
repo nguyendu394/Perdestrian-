@@ -130,7 +130,7 @@ def train(pretrain):
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT,weight_decay=W_DECAY)
 
-    f = open('models/MSDN/model11/log11.txt','a')
+    f = open('models/MSDN/model12/log12.txt','a')
     for epoch in range(max_epoch):  # Lặp qua bộ dữ liệu huấn luyện nhiều lần
         running_loss = 0.0
         st = time.time()
@@ -178,7 +178,7 @@ def train(pretrain):
                 f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        name_model = 'models/MSDN/model11/model11_lr_1e-4_bz_2_decay_epoch_{}.pth'.format(epoch)
+        name_model = 'models/MSDN/model12/model12_lr_1e-4_bz_2_decay_epoch_{}.pth'.format(epoch)
         torch.save(MSDN_net.state_dict(), name_model)
     f.close()
     print('model saved: ' + name_model)
@@ -209,7 +209,7 @@ def test(pretrain):
     running_loss = 0.0
     st = time.time()
 
-    test_file = 'mymodel/MSDN/test/AAAtest_{}.txt'.format(pretrain.split('/')[-1])
+    test_file = 'mymodel/MSDN/test1/test70_{}.txt'.format(pretrain.split('/')[-1])
     f = open(test_file,'a')
     with torch.no_grad():
         for i, sample in enumerate(dataloader):
@@ -284,7 +284,6 @@ def test(pretrain):
                     l,t,r,b,s = bb
                     w = r-l
                     h = b-t
-                    # if w > 0 and h >= cfg.TEST.MIN_HEIGHT and h <= cfg.TEST.MAX_HEIGHT:
                     f.write('{id},{l:9.3f},{t:9.3f},{w:9.3f},{h:9.3f},{s:9.3f}\n'.format(id=i+1,l=l,t=t,w=w,h=h,s=s*100))
             # torch.cuda.empty_cache()
     f.close()
@@ -301,13 +300,9 @@ def parse_args():
     return args
 if __name__ == '__main__':
     args = parse_args()
-    pretrain = 'models/MSDN/model10/model10_lr_1e-4_bz_2_decay_epoch_2.pth'
+    pretrain = 'models/MSDN/model11/model11_lr_1e-4_bz_2_decay_epoch_4.pth'
 
     if args.test:
         test(pretrain)
     else:
         train(pretrain)
-
-    # cls, pros = torch.load('out_MSDN_test.pth')
-    # print(cls.size())
-    # print(pros)

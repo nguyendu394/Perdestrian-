@@ -36,10 +36,10 @@ __C.TRAIN.ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/train/im
 __C.TRAIN.IMGS_CSV = 'mydata/imgs_train.csv'
 
 #list rois data train on KAIST with ACF thres -70 csv
-__C.TRAIN.ROIS_CSV = 'mydata/rois_trainKaist_thr80_MSDN.csv'
+__C.TRAIN.ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
 
 # Initial learning rate
-__C.TRAIN.LEARNING_RATE = 1e-4
+__C.TRAIN.LEARNING_RATE = 1e-3
 
 # Momentum
 __C.TRAIN.MOMENTUM = 0.9
@@ -57,7 +57,7 @@ __C.TRAIN.SHUFFLE = True
 __C.TRAIN.NUM_WORKERS = 24
 
 #unfeeze RRN parameters
-__C.TRAIN.FREEZE_RRN = True
+__C.TRAIN.FREEZE_RRN = False
 
 
 #maximum epoch
@@ -100,7 +100,7 @@ __C.TEST = edict()
 __C.TEST.THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test_tm/'
 __C.TEST.ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test'
 __C.TEST.IMGS_CSV = 'mydata/imgs_test.csv'
-__C.TEST.ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
+__C.TEST.ROIS_CSV = 'mydata/rois_testKaist_thr110_MSDN.csv'
 
 # Test using bounding-box regressors
 __C.TEST.BBOX_REG = True

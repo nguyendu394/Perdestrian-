@@ -22,7 +22,7 @@ def equalizeHist(gray):
     # exit()
     return gray
 
-def visualizeRP(img,bbs, gt=None, fm = 'ltrb'):
+def visualizeRP(img,bbs=None, gt=None, fm = 'ltrb'):
     '''
     Visualize region proposal
     input: img (numpy) WxHxC
@@ -33,30 +33,31 @@ def visualizeRP(img,bbs, gt=None, fm = 'ltrb'):
     print('GT',gt)
     if img.shape[2] == 1:
         img = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
+    if bbs is not None:
+        bbs = bbs.astype(np.int32)
+        for d in bbs:
+            id,l,t,r,b = d
+            # print(l,t,r,b)
+            # print(img.shape)
+            # exit()
 
-    bbs = bbs.astype(np.int32)
-    for d in bbs:
-        id,l,t,r,b = d
-        # print(l,t,r,b)
-        # print(img.shape)
-        if fm == 'ltrb':
-            img = cv2.rectangle(img,(l,t),(r,b),(0,255,0),1)
+            if fm == 'ltrb':
+                img = cv2.rectangle(img,(l,t),(r,b),(0,255,0),1)
 
-        elif fm == 'ltwh':
-            img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,255,0),1)
-            # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
-        if gt is not None:
-            if np.prod(gt.shape):
-                gt = gt.astype(np.int32)
-                for d in gt:
-                    l,t,r,b, cls = d
-                    # print(l,t,r,b)
-                    if fm == 'ltrb':
-                        img = cv2.rectangle(img,(l,t),(r,b),(0,0,255),1)
+            elif fm == 'ltwh':
+                img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,255,0),1)
+                # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
+    if gt is not None:
+        if np.prod(gt.shape):
+            gt = gt.astype(np.int32)
+            for d in gt:
+                l,t,r,b, cls = d
+                if fm == 'ltrb':
+                    img = cv2.rectangle(img,(l,t),(r,b),(0,0,255),1)
 
-                    elif fm == 'ltwh':
-                        img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,0,255),1)
-                        # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
+                elif fm == 'ltwh':
+                    img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,0,255),1)
+                    # img = cv2.rectangle(img,(l,t),(r+l,b+t),(0,c,255),2)
     return img
 
 def createImgsFilesName(path,name_file):
@@ -214,8 +215,8 @@ def visualizeErrorLoss(true_txt, false_txt=None, title=' ', ylabel=' ',xlabel='i
 
 def main():
     # img = cv2.imread('I01793.jpg')
-    bbs_txt = '../ngoc/toolbox/detector/models/Dets_TestK_All_with_Kaist_Thr70.txt'
-    bbs_csv = 'mydata/rois_testKaist_thr70_MSDN.csv'
+    bbs_txt = '../ngoc/toolbox/detector/models/Dets_Test_Kaist_Thr110.txt'
+    bbs_csv = 'mydata/rois_testKaist_thr110_MSDN.csv'
 
     convertRoisACF2CSV(bbs_txt, bbs_csv)
 
@@ -247,7 +248,7 @@ if __name__ == '__main__':
 
     # print('./models/model14/log14.txt')
     # true_txt = './mymodel/RRN/log24.txt'
-    true_txt = './models/MSDN/model10/log10.txt'
+    true_txt = './models/MSDN/model12/log12.txt'
 
     # # test_txt = './test2_model21_epoch7.txt'
-    visualizeErrorLoss(true_txt,ylabel='Multi-loss loss',title='MSDN',step=100)
+    visualizeErrorLoss(true_txt,ylabel='Multi-loss loss',title='MSDN',step=50)
