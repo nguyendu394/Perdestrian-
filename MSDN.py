@@ -130,7 +130,7 @@ def train(pretrain):
     criterion = nn.MSELoss()
     optimizer = optim.SGD(filter(lambda p: p.requires_grad,MSDN_net.parameters()), lr=LR, momentum=MT,weight_decay=W_DECAY)
 
-    f = open('models/MSDN/model12/log12.txt','a')
+    f = open('models/MSDN/model14/log14.txt','a')
     for epoch in range(max_epoch):  # Lặp qua bộ dữ liệu huấn luyện nhiều lần
         running_loss = 0.0
         st = time.time()
@@ -178,7 +178,7 @@ def train(pretrain):
                 f.write(text + '\n')
                 running_loss = 0.0
                 st = time.time()
-        name_model = 'models/MSDN/model12/model12_lr_1e-4_bz_2_decay_epoch_{}.pth'.format(epoch)
+        name_model = 'models/MSDN/model14/model14_lr_1e-4_bz_2_decay_epoch_{}.pth'.format(epoch)
         torch.save(MSDN_net.state_dict(), name_model)
     f.close()
     print('model saved: ' + name_model)
@@ -209,7 +209,7 @@ def test(pretrain):
     running_loss = 0.0
     st = time.time()
 
-    test_file = 'mymodel/MSDN/test1/test70_{}.txt'.format(pretrain.split('/')[-1])
+    test_file = 'mymodel/MSDN/test1/testDUDU_{}.txt'.format(pretrain.split('/')[-1])
     f = open(test_file,'a')
     with torch.no_grad():
         for i, sample in enumerate(dataloader):
@@ -300,7 +300,7 @@ def parse_args():
     return args
 if __name__ == '__main__':
     args = parse_args()
-    pretrain = 'models/MSDN/model11/model11_lr_1e-4_bz_2_decay_epoch_4.pth'
+    pretrain = 'mymodel/MSDN/test1/model13_lr_1e-4_bz_2_decay_epoch_3.pth'
 
     if args.test:
         test(pretrain)

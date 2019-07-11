@@ -41,8 +41,14 @@ def main():
     # print(aa.shape[0])
     # aa[:, 0] = aa[:, 0] - aa[0, 0]
 def splitTestPredicted(path_txt):
-    pd.read_csv(imgs_csv)
+    df = pd.read_csv(path_txt, header=None)
+    with open('night.txt','a') as f:
+        for i in range(29179,45141):
+            print(i)
+            data = df.loc[df[0]==i].values
+            for id,l,t,w,h,s in data:
+                f.write('{id},{l:9.3f},{t:9.3f},{w:9.3f},{h:9.3f},{s:9.3f}\n'.format(id=i-29178,l=l,t=t,w=w,h=h,s=s))
 
 if __name__ == '__main__':
     # main()
-    splitTest('mydata/imgs_test.csv')
+    splitTestPredicted('mymodel/MSDN/test1/test151_model13_lr_1e-4_bz_2_decay_epoch_3.pth.csv')

@@ -39,7 +39,7 @@ __C.TRAIN.IMGS_CSV = 'mydata/imgs_train.csv'
 __C.TRAIN.ROIS_CSV = 'mydata/rois_trainKaist_thr70_MSDN.csv'
 
 # Initial learning rate
-__C.TRAIN.LEARNING_RATE = 1e-3
+__C.TRAIN.LEARNING_RATE = 1e-4
 
 # Momentum
 __C.TRAIN.MOMENTUM = 0.9
@@ -100,7 +100,7 @@ __C.TEST = edict()
 __C.TEST.THERMAL_PATH = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test_tm/'
 __C.TEST.ROOT_DIR = '/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test'
 __C.TEST.IMGS_CSV = 'mydata/imgs_test.csv'
-__C.TEST.ROIS_CSV = 'mydata/rois_testKaist_thr110_MSDN.csv'
+__C.TEST.ROIS_CSV = 'mydata/rois_testKaist_thr70_MSDN.csv'
 
 # Test using bounding-box regressors
 __C.TEST.BBOX_REG = True
@@ -109,7 +109,7 @@ __C.TEST.BBOX_REG = True
 __C.TEST.MAX_GTS = 14
 
 #thres scrore
-__C.TEST.THRESS = 0.05
+__C.TEST.THRESS = 0.0
 
 #thres height
 __C.TEST.MIN_HEIGHT = 45

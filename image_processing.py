@@ -215,8 +215,8 @@ def visualizeErrorLoss(true_txt, false_txt=None, title=' ', ylabel=' ',xlabel='i
 
 def main():
     # img = cv2.imread('I01793.jpg')
-    bbs_txt = '../ngoc/toolbox/detector/models/Dets_Test_Kaist_Thr110.txt'
-    bbs_csv = 'mydata/rois_testKaist_thr110_MSDN.csv'
+    bbs_txt = '../ngoc/toolbox/detector/models/Dets_Test_KAIST_Thr70_Cal001.txt'
+    bbs_csv = 'mydata/rois_testKaist_thr70_01_MSDN.csv'
 
     convertRoisACF2CSV(bbs_txt, bbs_csv)
 
@@ -241,14 +241,14 @@ def flipBoundingBox(img,bboxes,gts):
 
 if __name__ == '__main__':
     # createImgsFilesName('/storageStudents/K2015/duyld/dungnm/dataset/KAIST/test/images_test', 'mydata/imgs_test.txt')
-    # main()
+    main()
     # path = 'mydata/I00000.png'
     # img1 = cv2.imread(path)
 
 
     # print('./models/model14/log14.txt')
     # true_txt = './mymodel/RRN/log24.txt'
-    true_txt = './models/MSDN/model12/log12.txt'
+    # true_txt = './models/MSDN/model12/log12_151.txt'
 
     # # test_txt = './test2_model21_epoch7.txt'
-    visualizeErrorLoss(true_txt,ylabel='Multi-loss loss',title='MSDN',step=50)
+    # visualizeErrorLoss(true_txt,ylabel='Multi-loss loss',title='MSDN',step=50)
